@@ -85,7 +85,7 @@ def check_stock(request, item_id):
 
 # ─────────────────────────────────────────
 # DECREMENT STOCK
-# Must be logged in to order
+# students only — must be logged in to order
 # ─────────────────────────────────────────
 @api_view(['POST'])
 @permission_classes([IsStudent])
@@ -93,18 +93,27 @@ def decrement_stock(request, item_id):
     """
     POST /stock/{item_id}/decrement/
     Requires valid JWT token.
-    Reduces stock by 1 using optimistic locking.
-    Called by Order Gateway when student places an order.
+    Body: { "quantity": 2 }
+    Reduces stock by requested quantity using optimistic locking.
 
-    Flow:
-    1. Check if quantity > 0 — if not return sold out
-    2. Try to update with version check
-    3. If version changed — someone else was faster — retry
-    4. If success — update Redis — return success
-    5. After 3 retries — return try again
+    Rules:
+    - If requested quantity > available stock → reject entire order
+    - If version conflict → retry up to 3 times
+    - If sold out → reject with sold out message
     """
     global total_orders, failed_orders, response_times
     start_time = time.time()
+
+    # Get requested quantity from request body
+    # Default to 1 if not provided
+    requested_quantity = request.data.get('quantity', 1)
+
+    # Validate — must be a positive integer
+    if not isinstance(requested_quantity, int) or requested_quantity <= 0:
+        return Response(
+            {"error": "quantity must be a positive integer"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
 
     MAX_RETRIES = 3
 
@@ -112,13 +121,12 @@ def decrement_stock(request, item_id):
         try:
             with transaction.atomic():
                 # Lock this row during the transaction
-                # Nothing else can modify it until we are done
                 item = FoodItem.objects.select_for_update().get(
                     id=item_id,
                     is_available=True
                 )
 
-                # Check 1 — is there any stock left?
+                # Check 1 — is there any stock at all?
                 if item.quantity <= 0:
                     failed_orders += 1
                     return Response(
@@ -126,34 +134,42 @@ def decrement_stock(request, item_id):
                         status=status.HTTP_409_CONFLICT
                     )
 
+                # Check 2 — is requested quantity more than available?
+                # If yes reject the ENTIRE order
+                if requested_quantity > item.quantity:
+                    failed_orders += 1
+                    return Response(
+                        {
+                            "error": f"Not enough stock. You requested {requested_quantity} but only {item.quantity} available. Please reorder with the correct quantity."
+                        },
+                        status=status.HTTP_409_CONFLICT
+                    )
+
                 current_version = item.version
 
-                # Check 2 — optimistic locking
+                # Check 3 — optimistic locking
                 # Only update if version still matches what we read
-                # If another request changed the version first
-                # updated_rows will be 0 and we retry
                 updated_rows = FoodItem.objects.filter(
                     id=item_id,
                     version=current_version
                 ).update(
-                    quantity=item.quantity - 1,
+                    quantity=item.quantity - requested_quantity,
                     version=current_version + 1
                 )
 
                 if updated_rows == 0:
-                    # Version mismatch — another request was faster
-                    # This is NOT sold out — just retry with fresh data
+                    # Version mismatch — someone else was faster
+                    # Not sold out — just retry with fresh data
                     print(f"Version conflict on attempt {attempt + 1}, retrying...")
                     continue
 
                 # Success — update Redis cache with new quantity
-                update_redis_cache(item_id, item.quantity - 1)
+                update_redis_cache(item_id, item.quantity - requested_quantity)
 
                 # Record response time for metrics
                 elapsed = time.time() - start_time
                 response_times.append(elapsed)
                 if len(response_times) > 100:
-                    # Keep only last 100 response times
                     response_times.pop(0)
 
                 total_orders += 1
@@ -162,8 +178,9 @@ def decrement_stock(request, item_id):
                     "success": True,
                     "item_id": item_id,
                     "item_name": item.name,
-                    "remaining_quantity": item.quantity - 1,
-                    "message": "Stock decremented successfully"
+                    "ordered_quantity": requested_quantity,
+                    "remaining_quantity": item.quantity - requested_quantity,
+                    "message": f"Successfully ordered {requested_quantity} x {item.name}"
                 })
 
         except FoodItem.DoesNotExist:
@@ -184,8 +201,6 @@ def decrement_stock(request, item_id):
 # ─────────────────────────────────────────
 # RESTORE STOCK
 # system use only — admins only
-# NOT for manually adding stock
-# Only for automatic recovery after partial failures
 # ─────────────────────────────────────────
 @api_view(['POST'])
 @permission_classes([IsAdminUser])
@@ -193,21 +208,25 @@ def restore_stock(request, item_id):
     """
     POST /stock/{item_id}/restore/
     Requires admin JWT token.
-    Adds 1 back to stock after a partial failure.
-
-    Partial failure example:
-    1. Order Gateway calls Stock Service — stock decremented
-    2. Order Gateway calls Kitchen Queue — CRASHES
-    3. Stock is gone but no order reached kitchen
-    4. Order Gateway calls this to put the stock back
+    Restores stock after a partial failure.
+    Body: { "quantity": 2 }
     """
+    # Restore exactly how many were decremented
+    quantity_to_restore = request.data.get('quantity', 1)
+
+    if not isinstance(quantity_to_restore, int) or quantity_to_restore <= 0:
+        return Response(
+            {"error": "quantity must be a positive integer"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
     try:
         with transaction.atomic():
             item = FoodItem.objects.select_for_update().get(
                 id=item_id,
                 is_available=True
             )
-            item.quantity += 1
+            item.quantity += quantity_to_restore
             item.version += 1
             item.save()
 
@@ -217,8 +236,9 @@ def restore_stock(request, item_id):
                 "success": True,
                 "item_id": item_id,
                 "item_name": item.name,
-                "restored_quantity": item.quantity,
-                "message": "Stock restored successfully"
+                "restored_quantity": quantity_to_restore,
+                "new_quantity": item.quantity,
+                "message": f"Restored {quantity_to_restore} portions successfully"
             })
     except FoodItem.DoesNotExist:
         return Response(
@@ -237,9 +257,6 @@ def add_stock(request, item_id):
     """
     POST /stock/{item_id}/add/
     Requires admin JWT token.
-    Admins use this to add more portions to an item.
-    e.g. "we made 50 more Iftar boxes"
-    Body: { "quantity": 50 }
     """
     quantity_to_add = request.data.get('quantity', 0)
 

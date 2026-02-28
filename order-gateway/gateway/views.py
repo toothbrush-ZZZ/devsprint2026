@@ -466,6 +466,19 @@ def cancel_order(request, order_id):
             print(f"Stock restore warning: {restore_response.json()}")
     except Exception as e:
         print(f"Stock restore failed during cancellation: {e}")
+    # Tell Kitchen Queue to cancel this order
+    # So kitchen staff know to stop preparing it
+    try:
+        requests.patch(
+            f"{settings.KITCHEN_QUEUE_URL}/kitchen/orders/{order_id}/cancel/",
+            headers={"Authorization": request.headers.get('Authorization')},
+            timeout=5
+        )
+        print(f"Kitchen order {order_id} cancelled successfully")
+    except Exception as e:
+        # Don't stop cancellation if kitchen notification fails
+        print(f"Kitchen cancel notification failed: {e}")
+
 
     # Update order status to cancelled
     old_status = order.status

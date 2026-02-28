@@ -10,7 +10,8 @@ class StockDecrementTest(TestCase):
     """
 
     def setUp(self):
-    
+        # Runs before every test method automatically
+        # Creates a fresh test item each time
         self.item = FoodItem.objects.create(
             name="Test Iftar Box",
             quantity=10,
@@ -25,7 +26,7 @@ class StockDecrementTest(TestCase):
         self.assertEqual(self.item.version, 0)
 
     def test_decrement_reduces_quantity(self):
-        # Simulates ordering 1 item
+        # Simulates what decrement_stock view does
         item = FoodItem.objects.get(id=self.item.id)
 
         FoodItem.objects.filter(
@@ -42,39 +43,8 @@ class StockDecrementTest(TestCase):
         self.assertEqual(item.quantity, 9)  # went from 10 to 9
         self.assertEqual(item.version, 1)   # version bumped from 0 to 1
 
-    def test_decrement_multiple_quantity(self):
-        # Simulates ordering 3 items at once
-        item = FoodItem.objects.get(id=self.item.id)
-        requested_quantity = 3
-
-        FoodItem.objects.filter(
-            id=item.id,
-            version=item.version
-        ).update(
-            quantity=item.quantity - requested_quantity,
-            version=item.version + 1
-        )
-
-        item.refresh_from_db()
-        self.assertEqual(item.quantity, 7)  # 10 - 3 = 7
-        self.assertEqual(item.version, 1)
-
-    def test_rejects_order_exceeding_stock(self):
-        # Student tries to order more than available
-        item = FoodItem.objects.get(id=self.item.id)
-
-        requested_quantity = 15   # more than available (10)
-        available_quantity = item.quantity
-
-        # Should be rejected — requested > available
-        self.assertGreater(requested_quantity, available_quantity)
-
-        # Stock should remain unchanged — nothing decremented
-        item.refresh_from_db()
-        self.assertEqual(item.quantity, 10)
-
     def test_optimistic_lock_prevents_double_decrement(self):
-        # Simulates two students ordering same item simultaneously
+        # Simulates two students ordering the same item simultaneously
         item = FoodItem.objects.get(id=self.item.id)
         original_version = item.version  # both students read version=0
 
@@ -131,14 +101,14 @@ class StockDecrementTest(TestCase):
         item = FoodItem.objects.get(id=self.item.id)
         original_quantity = item.quantity
 
-        # First decrement 2
-        item.quantity -= 2
+        # First decrement
+        item.quantity -= 1
         item.version += 1
         item.save()
 
-        # Then restore 2
+        # Then restore
         item.refresh_from_db()
-        item.quantity += 2
+        item.quantity += 1
         item.version += 1
         item.save()
 
@@ -156,5 +126,104 @@ class StockDecrementTest(TestCase):
         item.save()
 
         item.refresh_from_db()
-        # Should be original + 20
         self.assertEqual(item.quantity, original_quantity + quantity_to_add)
+
+class MenuManagementTest(TestCase):
+    """
+    Tests for admin menu management —
+    creating, deleting, pausing, unpausing items.
+    """
+
+    def setUp(self):
+        self.item = FoodItem.objects.create(
+            name="Fruit Salad",
+            quantity=50,
+            price=60.00,
+            version=0,
+            is_available=True
+        )
+
+    # ── CREATE ──────────────────────────────────────
+
+    def test_create_new_item(self):
+        new_item = FoodItem.objects.create(
+            name="Juice Box",
+            quantity=100,
+            price=35.00,
+            version=0,
+            is_available=True
+        )
+        self.assertEqual(new_item.name, "Juice Box")
+        self.assertEqual(new_item.quantity, 100)
+        self.assertTrue(new_item.is_available)
+
+    def test_duplicate_item_name_detected(self):
+        exists = FoodItem.objects.filter(name="Fruit Salad").exists()
+        self.assertTrue(exists)
+
+    # ── DELETE ──────────────────────────────────────
+
+    def test_delete_item_removes_from_database(self):
+        item_id = self.item.id
+        self.item.delete()
+
+        exists = FoodItem.objects.filter(id=item_id).exists()
+        self.assertFalse(exists)
+
+    def test_delete_nonexistent_item_raises_error(self):
+        with self.assertRaises(FoodItem.DoesNotExist):
+            FoodItem.objects.get(id=99999)
+
+    # ── PAUSE / UNPAUSE ─────────────────────────────
+
+    def test_pause_hides_item_from_menu(self):
+        self.item.is_available = False
+        self.item.version += 1
+        self.item.save()
+
+        self.item.refresh_from_db()
+        self.assertFalse(self.item.is_available)
+
+        visible_items = FoodItem.objects.filter(is_available=True)
+        self.assertNotIn(self.item, visible_items)
+
+    def test_unpause_restores_item_to_menu(self):
+        self.item.is_available = False
+        self.item.version += 1
+        self.item.save()
+
+        self.item.is_available = True
+        self.item.version += 1
+        self.item.save()
+
+        self.item.refresh_from_db()
+        self.assertTrue(self.item.is_available)
+
+        visible_items = FoodItem.objects.filter(is_available=True)
+        self.assertIn(self.item, visible_items)
+
+    def test_paused_item_cannot_be_ordered(self):
+        self.item.is_available = False
+        self.item.save()
+
+        result = FoodItem.objects.filter(
+            id=self.item.id,
+            is_available=True
+        ).first()
+
+        self.assertIsNone(result)
+
+    # ── LIST ────────────────────────────────────────
+
+    def test_list_only_shows_available_items(self):
+        paused = FoodItem.objects.create(
+            name="Paused Item",
+            quantity=10,
+            price=50.00,
+            is_available=False
+        )
+
+        visible = list(FoodItem.objects.filter(is_available=True))
+
+        self.assertIn(self.item, visible)
+        self.assertNotIn(paused, visible)

@@ -9,10 +9,8 @@ import redis
 import os
 import time
 
-# Connect to Redis cache
 redis_client = redis.from_url(os.getenv('REDIS_URL', 'redis://redis:6379'))
 
-# Metrics counters — reset when service restarts
 total_orders = 0
 failed_orders = 0
 response_times = []
@@ -105,29 +103,18 @@ def decrement_stock(request, item_id):
     global total_orders, failed_orders, response_times
     start_time = time.time()
 
-    # Get requested quantity from request body
-    # Default to 1 if not provided
-    requested_quantity = request.data.get('quantity', 1)
-
-    # Validate — must be a positive integer
-    if not isinstance(requested_quantity, int) or requested_quantity <= 0:
-        return Response(
-            {"error": "quantity must be a positive integer"},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-
     MAX_RETRIES = 3
 
     for attempt in range(MAX_RETRIES):
         try:
             with transaction.atomic():
-                # Lock this row during the transaction
-                item = FoodItem.objects.select_for_update().get(
-                    id=item_id,
-                    is_available=True
+                
+                item = FoodItem.objects.get(
+                id=item_id,
+                is_available=True
                 )
 
-                # Check 1 — is there any stock at all?
+                # Check 1 — is there any stock left?
                 if item.quantity <= 0:
                     failed_orders += 1
                     return Response(
@@ -135,42 +122,30 @@ def decrement_stock(request, item_id):
                         status=status.HTTP_409_CONFLICT
                     )
 
-                # Check 2 — is requested quantity more than available?
-                # If yes reject the ENTIRE order
-                if requested_quantity > item.quantity:
-                    failed_orders += 1
-                    return Response(
-                        {
-                            "error": f"Not enough stock. You requested {requested_quantity} but only {item.quantity} available. Please reorder with the correct quantity."
-                        },
-                        status=status.HTTP_409_CONFLICT
-                    )
-
                 current_version = item.version
 
-                # Check 3 — optimistic locking
+                # Check 2 — optimistic locking
                 # Only update if version still matches what we read
                 updated_rows = FoodItem.objects.filter(
                     id=item_id,
                     version=current_version
                 ).update(
-                    quantity=item.quantity - requested_quantity,
+                    quantity=item.quantity - 1,
                     version=current_version + 1
                 )
 
                 if updated_rows == 0:
-                    # Version mismatch — someone else was faster
-                    # Not sold out — just retry with fresh data
+                    # Version mismatch — another request was faster
                     print(f"Version conflict on attempt {attempt + 1}, retrying...")
                     continue
 
-                # Success — update Redis cache with new quantity
-                update_redis_cache(item_id, item.quantity - requested_quantity)
+                update_redis_cache(item_id, item.quantity - 1)
 
                 # Record response time for metrics
                 elapsed = time.time() - start_time
                 response_times.append(elapsed)
                 if len(response_times) > 100:
+                    # Keep only last 100 response times
                     response_times.pop(0)
 
                 total_orders += 1
@@ -179,9 +154,8 @@ def decrement_stock(request, item_id):
                     "success": True,
                     "item_id": item_id,
                     "item_name": item.name,
-                    "ordered_quantity": requested_quantity,
-                    "remaining_quantity": item.quantity - requested_quantity,
-                    "message": f"Successfully ordered {requested_quantity} x {item.name}"
+                    "remaining_quantity": item.quantity - 1,
+                    "message": "Stock decremented successfully"
                 })
 
         except FoodItem.DoesNotExist:
@@ -191,7 +165,6 @@ def decrement_stock(request, item_id):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-    # All 3 retries failed due to high demand
     failed_orders += 1
     return Response(
         {"error": "High demand! Please try again in a moment"},
@@ -212,22 +185,13 @@ def restore_stock(request, item_id):
     Restores stock after a partial failure.
     Body: { "quantity": 2 }
     """
-    # Restore exactly how many were decremented
-    quantity_to_restore = request.data.get('quantity', 1)
-
-    if not isinstance(quantity_to_restore, int) or quantity_to_restore <= 0:
-        return Response(
-            {"error": "quantity must be a positive integer"},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-
     try:
         with transaction.atomic():
             item = FoodItem.objects.select_for_update().get(
                 id=item_id,
                 is_available=True
             )
-            item.quantity += quantity_to_restore
+            item.quantity += 1
             item.version += 1
             item.save()
 
@@ -237,9 +201,8 @@ def restore_stock(request, item_id):
                 "success": True,
                 "item_id": item_id,
                 "item_name": item.name,
-                "restored_quantity": quantity_to_restore,
-                "new_quantity": item.quantity,
-                "message": f"Restored {quantity_to_restore} portions successfully"
+                "restored_quantity": item.quantity,
+                "message": "Stock restored successfully"
             })
     except FoodItem.DoesNotExist:
         return Response(
@@ -383,6 +346,109 @@ def unpause_item(request, item_id):
             status=status.HTTP_404_NOT_FOUND
         )
     
+# ─────────────────────────────────────────
+# CREATE ITEM
+# admins only — add a new item to the menu
+# ─────────────────────────────────────────
+@api_view(['POST'])
+@permission_classes([IsAdminUser])
+def create_item(request):
+    """
+    POST /items/create/
+    Requires admin JWT token.
+    Body: {
+        "name": "Iftar Box",
+        "quantity": 100,
+        "price": 120.00
+    }
+    Creates a brand new food item on the menu.
+    is_available defaults to True so it shows up immediately.
+    """
+    name = request.data.get('name')
+    quantity = request.data.get('quantity')
+    price = request.data.get('price')
+
+    # Validate — all three fields are required
+    if not name:
+        return Response(
+            {"error": "name is required"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    if not isinstance(quantity, int) or quantity < 0:
+        return Response(
+            {"error": "quantity must be a non-negative integer"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    if price is None:
+        return Response(
+            {"error": "price is required"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Check — don't allow duplicate item names
+    if FoodItem.objects.filter(name=name).exists():
+        return Response(
+            {"error": f"An item named '{name}' already exists. Use add_stock to increase quantity."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    item = FoodItem.objects.create(
+        name=name,
+        quantity=quantity,
+        price=price,
+        version=0,
+        is_available=True
+    )
+
+    # Sync Redis so Order Gateway cache is up to date immediately
+    update_redis_cache(item.id, item.quantity)
+
+    return Response({
+        "success": True,
+        "item_id": item.id,
+        "item_name": item.name,
+        "quantity": item.quantity,
+        "price": str(item.price),
+        "message": f"'{item.name}' has been added to the menu."
+    }, status=status.HTTP_201_CREATED)
+
+
+# ─────────────────────────────────────────
+# DELETE ITEM
+# admins only — permanently remove from menu
+# ─────────────────────────────────────────
+@api_view(['DELETE'])
+@permission_classes([IsAdminUser])
+def delete_item(request, item_id):
+    """
+    DELETE /items/{item_id}/delete/
+    Requires admin JWT token.
+    Permanently removes the item from the database.
+
+    Note: For temporary removal, use pause instead.
+    Only use delete when the item will never come back.
+    """
+    try:
+        item = FoodItem.objects.get(id=item_id)
+        item_name = item.name  # save name before deletion for the response
+
+        item.delete()
+
+        # Remove from Redis cache — set to 0 so Gateway rejects instantly
+        update_redis_cache(item_id, 0)
+
+        return Response({
+            "success": True,
+            "item_id": item_id,
+            "item_name": item_name,
+            "message": f"'{item_name}' has been permanently deleted from the menu."
+        })
+
+    except FoodItem.DoesNotExist:
+        return Response(
+            {"error": "Item not found"},
+            status=status.HTTP_404_NOT_FOUND
+        ) 
 
 # ─────────────────────────────────────────
 # HEALTH CHECK

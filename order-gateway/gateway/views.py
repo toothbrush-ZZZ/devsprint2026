@@ -81,7 +81,7 @@ def place_order(request):
     """
     POST /order/
     Requires valid JWT token.
-    Body: { "item_id": 1, "quantity": 2 }
+    Body: { "item_id": 1 }
 
     Full flow:
     1. Validate token (JWT middleware handles this automatically)
@@ -97,7 +97,7 @@ def place_order(request):
 
     # Get order details from request body
     item_id = request.data.get('item_id')
-    quantity = request.data.get('quantity', 1)
+    quantity = 1  # Always 1 — each order is for a single item
 
     # Get student info from the JWT token
     # request.auth is the decoded token
@@ -107,12 +107,6 @@ def place_order(request):
     if not item_id:
         return Response(
             {"error": "item_id is required"},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-
-    if not isinstance(quantity, int) or quantity <= 0:
-        return Response(
-            {"error": "quantity must be a positive integer"},
             status=status.HTTP_400_BAD_REQUEST
         )
 
@@ -126,14 +120,6 @@ def place_order(request):
             failed_orders += 1
             return Response(
                 {"error": "Item is sold out (cache check)"},
-                status=status.HTTP_409_CONFLICT
-            )
-        if quantity > cached_quantity:
-            failed_orders += 1
-            return Response(
-                {
-                    "error": f"Not enough stock. Only {cached_quantity} available."
-                },
                 status=status.HTTP_409_CONFLICT
             )
     else:
@@ -190,7 +176,6 @@ def place_order(request):
     try:
         stock_response = requests.post(
             f"{settings.STOCK_SERVICE_URL}/stock/{item_id}/decrement/",
-            json={"quantity": quantity},
             headers={"Authorization": request.headers.get('Authorization')},
             timeout=5
         )
@@ -258,7 +243,6 @@ def place_order(request):
             try:
                 requests.post(
                     f"{settings.STOCK_SERVICE_URL}/stock/{item_id}/restore/",
-                    json={"quantity": quantity},
                     headers={"Authorization": request.headers.get('Authorization')},
                     timeout=5
                 )
@@ -277,7 +261,6 @@ def place_order(request):
         try:
             requests.post(
                 f"{settings.STOCK_SERVICE_URL}/stock/{item_id}/restore/",
-                json={"quantity": quantity},
                 headers={"Authorization": request.headers.get('Authorization')},
                 timeout=5
             )
@@ -458,7 +441,6 @@ def cancel_order(request, order_id):
     try:
         restore_response = requests.post(
             f"{settings.STOCK_SERVICE_URL}/stock/{order.item_id}/restore/",
-            json={"quantity": order.quantity},
             headers={"Authorization": request.headers.get('Authorization')},
             timeout=5
         )

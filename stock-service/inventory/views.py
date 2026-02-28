@@ -50,7 +50,8 @@ def list_items(request):
             "name": item.name,
             "quantity": item.quantity,
             "price": str(item.price),
-            "available": item.quantity > 0
+            "available": item.quantity > 0,
+            "is_paused": not item.is_available
             # available=False means order button is disabled on frontend
         })
     return Response(data)
@@ -294,6 +295,94 @@ def add_stock(request, item_id):
             status=status.HTTP_404_NOT_FOUND
         )
 
+
+# ─────────────────────────────────────────
+# PAUSE ITEM
+# admins only
+# ─────────────────────────────────────────
+@api_view(['POST'])
+@permission_classes([IsAdminUser])
+def pause_item(request, item_id):
+    """
+    POST /stock/{item_id}/pause/
+    Admins only.
+    Pauses orders for a specific item.
+    """
+    try:
+        with transaction.atomic():
+            item = FoodItem.objects.select_for_update().get(id=item_id)
+
+            if not item.is_available:
+                return Response(
+                    {"error": f"{item.name} is already paused"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            item.is_available = False
+            item.version += 1
+            item.save()
+
+            update_redis_cache(item_id, 0)
+
+            return Response({
+                "success": True,
+                "item_id": item_id,
+                "item_name": item.name,
+                "status": "paused",
+                "message": f"{item.name} is now paused. No new orders will be accepted."
+            })
+
+    except FoodItem.DoesNotExist:
+        return Response(
+            {"error": "Item not found"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+
+# ─────────────────────────────────────────
+# UNPAUSE ITEM
+# admins only
+# ─────────────────────────────────────────
+@api_view(['POST'])
+@permission_classes([IsAdminUser])
+def unpause_item(request, item_id):
+    """
+    POST /stock/{item_id}/unpause/
+    Admins only.
+    Resumes orders for a paused item.
+    """
+    try:
+        with transaction.atomic():
+            item = FoodItem.objects.select_for_update().get(id=item_id)
+
+            if item.is_available:
+                return Response(
+                    {"error": f"{item.name} is not paused"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            item.is_available = True
+            item.version += 1
+            item.save()
+
+
+            update_redis_cache(item_id, item.quantity)
+
+            return Response({
+                "success": True,
+                "item_id": item_id,
+                "item_name": item.name,
+                "status": "active",
+                "quantity": item.quantity,
+                "message": f"{item.name} is now active. Orders will be accepted."
+            })
+
+    except FoodItem.DoesNotExist:
+        return Response(
+            {"error": "Item not found"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    
 
 # ─────────────────────────────────────────
 # HEALTH CHECK

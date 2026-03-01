@@ -57,7 +57,7 @@ def process_order_in_background(kitchen_order_id, order_id, token):
             kitchen_order.status = 'failed'
             kitchen_order.save()
             update_order_gateway_status(order_id, 'failed', token)
-        except:
+        except Exception:
             pass
 
 
@@ -330,7 +330,7 @@ def metrics(request):
         ready = KitchenOrder.objects.filter(status='ready').count()
         cancelled = KitchenOrder.objects.filter(status='cancelled').count()
         failed = KitchenOrder.objects.filter(status='failed').count()
-    except:
+    except Exception:
         total_orders = queued = preparing = ready = cancelled = failed = 0
 
     return Response({

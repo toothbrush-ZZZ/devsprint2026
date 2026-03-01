@@ -126,7 +126,7 @@ def place_order(request):
         # Redis miss — check Stock Service directly
         actual_quantity = get_stock_from_service(
             item_id,
-            str(request.auth)
+            request.headers.get('Authorization', '').replace('Bearer ', '')
         )
         if actual_quantity is not None and actual_quantity <= 0:
             failed_orders += 1
@@ -246,7 +246,7 @@ def place_order(request):
                     headers={"Authorization": request.headers.get('Authorization')},
                     timeout=5
                 )
-            except:
+            except Exception:
                 pass
             order.status = 'failed'
             order.save()
@@ -264,7 +264,7 @@ def place_order(request):
                 headers={"Authorization": request.headers.get('Authorization')},
                 timeout=5
             )
-        except:
+        except Exception:
             pass
         order.status = 'failed'
         order.save()
@@ -364,10 +364,10 @@ def get_all_orders(request):
 
 # ─────────────────────────────────────────
 # UPDATE ORDER STATUS
-# admins only — kitchen staff marks orders ready
+# used by Kitchen Queue to update order status
 # ─────────────────────────────────────────
 @api_view(['PATCH'])
-@permission_classes([IsAdminUser])
+@permission_classes([IsStudent])
 def update_order_status(request, order_id):
     """
     PATCH /order/{order_id}/status/
@@ -585,7 +585,7 @@ def metrics(request):
         in_kitchen = Order.objects.filter(status='in_kitchen').count()
         ready = Order.objects.filter(status='ready').count()
         failed = Order.objects.filter(status='failed').count()
-    except:
+    except Exception:
         total_db_orders = 0
         pending = in_kitchen = ready = failed = 0
 

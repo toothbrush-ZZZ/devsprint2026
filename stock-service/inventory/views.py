@@ -40,7 +40,7 @@ def list_items(request):
     GET /items/
     disable order buttons when quantity is 0.
     """
-    items = FoodItem.objects.filter(is_available=True)
+    items = FoodItem.objects.all()
     data = []
     for item in items:
         data.append({
@@ -48,9 +48,8 @@ def list_items(request):
             "name": item.name,
             "quantity": item.quantity,
             "price": str(item.price),
-            "available": item.quantity > 0,
+            "available": item.quantity > 0 and item.is_available,
             "is_paused": not item.is_available
-            # available=False means order button is disabled on frontend
         })
     return Response(data)
 
@@ -174,15 +173,15 @@ def decrement_stock(request, item_id):
 
 # ─────────────────────────────────────────
 # RESTORE STOCK
-# system use only — admins only
+# system use only — used by Order Gateway for compensating transactions
 # ─────────────────────────────────────────
 @api_view(['POST'])
-@permission_classes([IsAdminUser])
+@permission_classes([IsStudent])
 def restore_stock(request, item_id):
     """
     POST /stock/{item_id}/restore/
-    Requires admin JWT token.
-    Restores stock after a partial failure.
+    Requires valid JWT token.
+    Restores stock after a partial failure (e.g., kitchen rejected the order).
     Body: { "quantity": 2 }
     """
     try:
@@ -518,7 +517,7 @@ def metrics(request):
             is_available=True,
             quantity__gt=0
         ).count()
-    except:
+    except Exception:
         total_items = 0
         items_in_stock = 0
 

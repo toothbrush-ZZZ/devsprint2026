@@ -73,7 +73,9 @@ jobs:
           DB_PORT: 5432
           REDIS_URL: redis://localhost:6379
           DJANGO_SECRET_KEY: test-secret-key-ci
-        run: python manage.py migrate --run-syncdb
+        run: |
+          python manage.py makemigrations
+          python manage.py migrate --run-syncdb
 
       - name: Run tests
         working-directory: ${{ matrix.service }}
@@ -168,7 +170,7 @@ jobs:
           TOKEN=$(curl -s -X POST http://localhost:8001/login/ \
             -H "Content-Type: application/json" \
             -d '{"student_id":"210041001","password":"password123"}' \
-            | python3 -c "import sys,json; print(json.load(sys.stdin)['access'])")
+            | python3 -c "import sys,json; print(json.load(sys.stdin)['access_token'])")
 
           echo "Got token: ${TOKEN:0:20}..."
 

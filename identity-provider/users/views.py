@@ -7,6 +7,10 @@ from rest_framework_simplejwt.exceptions import TokenError
 from django.contrib.auth import authenticate
 from django.contrib.auth.hashers import make_password
 from .models import Student
+import redis
+import os
+
+redis_client = redis.from_url(os.getenv('REDIS_URL', 'redis://redis:6379'))
 
 
 @api_view(['POST'])
@@ -60,6 +64,23 @@ def login(request):
             {"error": "student_id and password are required"},
             status=status.HTTP_400_BAD_REQUEST
         )
+
+    # Rate limiting: 3 login attempts per minute per student_id
+    try:
+        rate_key = f"login_attempts:{student_id}"
+        attempts = redis_client.get(rate_key)
+        if attempts and int(attempts) >= 3:
+            return Response(
+                {"error": "Too many login attempts. Please wait 1 minute before trying again."},
+                status=status.HTTP_429_TOO_MANY_REQUESTS
+            )
+        pipe = redis_client.pipeline()
+        pipe.incr(rate_key)
+        pipe.expire(rate_key, 60)
+        pipe.execute()
+    except Exception as e:
+        # If Redis is down, allow login but log the error
+        print(f"Rate limiting unavailable: {e}")
 
     # Checks username + password
     student = authenticate(username=student_id, password=password)
@@ -140,7 +161,7 @@ def metrics(request):
     """
     try:
         total_students = Student.objects.count()
-    except:
+    except Exception:
         total_students = 0
 
     return Response({

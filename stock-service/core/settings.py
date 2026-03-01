@@ -17,7 +17,7 @@ INSTALLED_APPS = [
     'django.contrib.auth',
     'rest_framework',
     'rest_framework_simplejwt',
-    'inventory',  # our app for this service
+    'inventory', 
 ]
 
 MIDDLEWARE = [
@@ -40,7 +40,7 @@ DATABASES = {
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'core.authentication.MicroserviceJWTAuthentication',
     )
 }
 
@@ -49,9 +49,6 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
-# Redis connection — used to cache stock levels
-# so the Order Gateway can check stock without
-# hitting the database every time
 REDIS_URL = os.getenv('REDIS_URL', 'redis://redis:6379')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

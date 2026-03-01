@@ -29,9 +29,6 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'core.urls'
 
-# ASGI application — needed for WebSockets
-# Regular Django uses WSGI (synchronous)
-# Channels uses ASGI (asynchronous) which supports WebSockets
 ASGI_APPLICATION = 'core.asgi.application'
 
 DATABASES = {
@@ -60,7 +57,7 @@ CHANNEL_LAYERS = {
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'core.authentication.MicroserviceJWTAuthentication',
     )
 }
 

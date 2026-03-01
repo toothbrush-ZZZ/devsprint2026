@@ -17,6 +17,7 @@ done
 
 echo "Database ready!"
 
+python manage.py makemigrations
 python manage.py migrate --run-syncdb
 
 echo "Starting Kitchen Queue on port 8004..."

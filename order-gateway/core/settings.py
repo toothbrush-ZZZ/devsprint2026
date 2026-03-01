@@ -40,7 +40,7 @@ DATABASES = {
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'core.authentication.MicroserviceJWTAuthentication',
     )
 }
 
@@ -49,13 +49,11 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
-# URLs of other services
 IDENTITY_PROVIDER_URL = os.getenv('IDENTITY_PROVIDER_URL', 'http://identity-provider:8001')
 STOCK_SERVICE_URL = os.getenv('STOCK_SERVICE_URL', 'http://stock-service:8002')
 KITCHEN_QUEUE_URL = os.getenv('KITCHEN_QUEUE_URL', 'http://kitchen-queue:8004')
 NOTIFICATION_HUB_URL = os.getenv('NOTIFICATION_HUB_URL', 'http://notification-hub:8005')
 
-# Redis URL for stock cache
 REDIS_URL = os.getenv('REDIS_URL', 'redis://redis:6379')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

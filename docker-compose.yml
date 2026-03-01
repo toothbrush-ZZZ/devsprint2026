@@ -12,18 +12,19 @@ services:
     image: postgres:15
     # Official PostgreSQL image — no Dockerfile needed
     environment:
-      POSTGRES_DB: cafeteria
+      POSTGRES_DB: postgres
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
       # Named volume — data persists between docker-compose down/up
       # Without this, database resets every time you restart
     ports:
       - "5432:5432"
       # Expose to host so you can connect with a DB client if needed
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U user -d cafeteria"]
+      test: ["CMD-SHELL", "pg_isready -U user -d postgres"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -53,7 +54,7 @@ services:
       - "8001:8001"
     environment:
       - DJANGO_SECRET_KEY=django-insecure-devsprint2026
-      - DB_NAME=cafeteria
+      - DB_NAME=identity_db
       - DB_USER=user
       - DB_PASSWORD=password
       - DB_HOST=db
@@ -80,7 +81,7 @@ services:
       - "8002:8002"
     environment:
       - DJANGO_SECRET_KEY=django-insecure-devsprint2026
-      - DB_NAME=cafeteria
+      - DB_NAME=stock_db
       - DB_USER=user
       - DB_PASSWORD=password
       - DB_HOST=db
@@ -104,7 +105,7 @@ services:
       - "8003:8003"
     environment:
       - DJANGO_SECRET_KEY=django-insecure-devsprint2026
-      - DB_NAME=cafeteria
+      - DB_NAME=order_db
       - DB_USER=user
       - DB_PASSWORD=password
       - DB_HOST=db
@@ -131,7 +132,7 @@ services:
       - "8004:8004"
     environment:
       - DJANGO_SECRET_KEY=django-insecure-devsprint2026
-      - DB_NAME=cafeteria
+      - DB_NAME=kitchen_db
       - DB_USER=user
       - DB_PASSWORD=password
       - DB_HOST=db
@@ -156,7 +157,7 @@ services:
       - "8005:8005"
     environment:
       - DJANGO_SECRET_KEY=django-insecure-devsprint2026
-      - DB_NAME=cafeteria
+      - DB_NAME=notification_db
       - DB_USER=user
       - DB_PASSWORD=password
       - DB_HOST=db

@@ -19,6 +19,7 @@ done
 echo "Database is ready!"
 
 # Create all database tables from models
+python manage.py makemigrations
 python manage.py migrate --run-syncdb
 
 # Create default users

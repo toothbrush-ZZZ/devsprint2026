@@ -11,6 +11,7 @@ SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "django-insecure-devsprint2026")
 
 DEBUG = True
 ALLOWED_HOSTS = ["*"]
+CORS_ALLOW_ALL_ORIGINS = True
 
 INSTALLED_APPS = [
     'daphne', 
@@ -18,11 +19,13 @@ INSTALLED_APPS = [
     'django.contrib.auth',
     'rest_framework',
     'rest_framework_simplejwt',
+    'corsheaders',
     'channels',
     'notifications',
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.middleware.common.CommonMiddleware',
 ]

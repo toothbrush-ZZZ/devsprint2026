@@ -167,8 +167,24 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+# ─────────────────────────────────────────
+  # FRONTEND — React + Vite — port 3000
+  # Student UI + Admin Dashboard
+  # ─────────────────────────────────────────
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - identity-provider
+      - stock-service
+      - order-gateway
+      - kitchen-queue
+      - notification-hub
 
 volumes:
   postgres_data:
   # Named volume keeps database data between restarts
   # Without this: all data lost every docker-compose down
+

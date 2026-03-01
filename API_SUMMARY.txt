@@ -1,0 +1,275 @@
+================================================================================
+                    DEVSPRINT2026 - API SUMMARY
+================================================================================
+
+## ARCHITECTURE OVERVIEW
+
+A Django-based REST microservices system for a student cafeteria ordering 
+platform. 5 independent services coordinate through HTTP calls and Redis pub/sub. 
+PostgreSQL backend; WebSocket support for real-time notifications.
+
+================================================================================
+## SERVICE BASE URLS & PORTS
+================================================================================
+
+Service                Port    URL (Internal Docker)
+------                 -----   ----------------------
+Identity Provider      8001    http://identity-provider:8001
+Stock Service          8002    http://stock-service:8002
+Order Gateway          8003    http://order-gateway:8003
+Kitchen Queue          8004    http://kitchen-queue:8004
+Notification Hub       8005    http://notification-hub:8005
+
+================================================================================
+## AUTHENTICATION FLOW
+================================================================================
+
+JWT-BASED STATELESS AUTHENTICATION:
+
+1. REGISTER
+   Endpoint: POST /register/
+   Body: {"student_id": "210041001", "password": "pass123"}
+   Response: 201 with confirmation message
+
+2. LOGIN
+   Endpoint: POST /login/
+   Body: {"student_id": "210041001", "password": "pass123"}
+   Response: 200
+   {
+     "access_token": "eyJ...",
+     "refresh_token": "eyJ...",
+     "student_id": "210041001",
+     "is_admin": false
+   }
+
+3. TOKEN STRUCTURE
+   - Access Token lifetime: 1 hour
+   - Refresh Token lifetime: 1 day
+   - Header format: Authorization: Bearer <access_token>
+   - Custom claims embedded: student_id, is_admin
+   - Rate Limiting: 3 login attempts per minute using Redis cache
+
+4. TOKEN VERIFICATION (Inter-service)
+   Endpoint: POST /verify/
+   Body: {"token": "eyJ..."}
+   Returns: {"valid": true, "student_id": "...", "is_admin": false}
+
+================================================================================
+## ENDPOINTS BY SERVICE
+================================================================================
+
+--- IDENTITY PROVIDER (Port 8001) ---
+
+POST   /register/        — Create student account
+POST   /login/           — Authenticate, get JWT tokens
+POST   /verify/          — Validate token (inter-service)
+GET    /health/          — Service health check
+GET    /metrics/         — Service metrics (student count)
+POST   /chaos/           — Toggle chaos mode (admin only)
+
+
+--- STOCK SERVICE (Port 8002) ---
+
+GET    /items/                    — List all food items
+POST   /items/create/             — Create menu item (admin)
+DELETE /items/<item_id>/delete/   — Remove item (admin)
+GET    /stock/<item_id>/          — Check stock level
+POST   /stock/<item_id>/decrement/— Reduce stock (student)
+POST   /stock/<item_id>/restore/  — Restore stock (admin)
+POST   /stock/<item_id>/add/      — Add stock (admin)
+POST   /stock/<item_id>/pause/    — Mark unavailable (admin)
+POST   /stock/<item_id>/unpause/  — Mark available (admin)
+GET    /health/                   — Health check
+GET    /metrics/                  — Service metrics
+POST   /chaos/                    — Toggle chaos mode (admin)
+
+
+--- ORDER GATEWAY (Port 8003) ---
+
+POST   /order/                 — Place new order (student)
+GET    /order/<order_id>/      — Get order status
+PATCH  /order/<order_id>/status/— Update order status (inter-service)
+DELETE /order/<order_id>/cancel/— Cancel order (student)
+GET    /orders/                — Get all orders
+GET    /health/                — Health check
+GET    /metrics/               — Service metrics
+POST   /chaos/                 — Toggle chaos mode (admin)
+
+
+--- KITCHEN QUEUE (Port 8004) ---
+
+POST   /kitchen/orders/                 — Receive order from Order Gateway
+GET    /kitchen/orders/all/             — Get all orders for kitchen
+PATCH  /kitchen/orders/<order_id>/ready/— Mark order ready (kitchen staff)
+DELETE /kitchen/orders/<order_id>/cancel/— Cancel order (kitchen staff)
+GET    /health/                         — Health check
+GET    /metrics/                        — Service metrics
+POST   /chaos/                          — Toggle chaos mode (admin)
+
+
+--- NOTIFICATION HUB (Port 8005) ---
+
+POST   /notify/       — Push status update (inter-service)
+GET    /health/       — Health check
+GET    /metrics/      — Service metrics
+POST   /chaos/        — Toggle chaos mode (admin)
+
+WebSocket Endpoints:
+/ws/student/<student_id>/   — Real-time order notifications
+/ws/kitchen/                — Kitchen staff notifications
+
+================================================================================
+## RESPONSE FORMATS
+================================================================================
+
+STANDARD SUCCESS RESPONSE:
+{
+  "success": true,
+  "data": { /* specific data */ }
+}
+
+STANDARD ERROR RESPONSE:
+{
+  "error": "Human-readable error message",
+  "status": "HTTP status code"
+}
+
+STOCK ITEM RESPONSE:
+{
+  "id": 1,
+  "name": "Biryani",
+  "quantity": 50,
+  "price": "150.00",
+  "available": true,
+  "is_paused": false
+}
+
+ORDER RESPONSE:
+{
+  "success": true,
+  "order_id": 42,
+  "status": "pending",
+  "student_id": "210041001",
+  "item_id": 1,
+  "item_name": "Biryani",
+  "quantity": 1
+}
+
+HEALTH CHECK RESPONSE:
+{
+  "status": "ok",
+  "database": "reachable"
+}
+
+METRICS RESPONSE:
+{
+  "service": "identity-provider",
+  "total_students": 450,
+  "status": "running"
+}
+
+================================================================================
+## HTTP STATUS CODES
+================================================================================
+
+200 — Success
+201 — Created
+400 — Bad Request
+401 — Unauthorized
+403 — Forbidden
+404 — Not Found
+409 — Conflict (e.g., sold out)
+429 — Too Many Requests (rate limited)
+503 — Service Unavailable
+
+================================================================================
+## KEY FEATURES
+================================================================================
+
+✓ Caching: Redis for stock levels (high-speed checks)
+✓ Idempotency: UUID-based idempotency keys prevent duplicate orders
+✓ Async Processing: Background threads for order preparation
+✓ Rate Limiting: Redis-backed login attempt throttling
+✓ Chaos Testing: Manual toggles to simulate service failures
+✓ WebSocket Support: Real-time push notifications via Django Channels
+✓ CORS Enabled: All services allow cross-origin requests
+✓ Database: PostgreSQL (separate DB per service)
+
+================================================================================
+## EXAMPLE REQUEST/RESPONSE FLOWS
+================================================================================
+
+FLOW 1: STUDENT PLACES AN ORDER
+--------------------------------
+1. Student logs in via Identity Provider
+   POST http://localhost:8001/login/
+   → Gets access_token
+
+2. Student checks menu
+   GET http://localhost:8002/items/
+   → Returns list of food items
+
+3. Student places order
+   POST http://localhost:8003/order/
+   Headers: Authorization: Bearer <access_token>
+   Body: {"item_id": 1}
+   → Returns order_id=42, status=pending
+
+4. Order Gateway internally:
+   - Checks Redis cache for stock
+   - Creates order in database
+   - Calls Stock Service to decrement stock
+   - Calls Kitchen Queue to process order
+   - Calls Notification Hub to notify student
+
+5. Student receives WebSocket message via Notification Hub
+   /ws/student/210041001/
+   Message: {"order_id": 42, "status": "in_kitchen", ...}
+
+FLOW 2: KITCHEN STAFF MARKS ORDER READY
+----------------------------------------
+1. Kitchen staff sees order via WebSocket
+   /ws/kitchen/
+   Message: {"order_id": 42, "status": "new_order", ...}
+
+2. Kitchen staff marks order ready
+   PATCH http://localhost:8004/kitchen/orders/42/ready/
+   → Status updated
+
+3. Order Gateway updates status
+   PATCH http://localhost:8003/order/42/status/
+   Body: {"status": "ready"}
+
+4. Notification Hub notifies student
+   /ws/student/210041001/
+   Message: {"order_id": 42, "status": "ready", ...}
+
+================================================================================
+## ENVIRONMENT VARIABLES
+================================================================================
+
+DJANGO_SECRET_KEY=django-insecure-devsprint2026
+DB_NAME=<service>_db (identity_db, stock_db, order_db, kitchen_db)
+DB_USER=user
+DB_PASSWORD=password
+DB_HOST=db
+DB_PORT=5432
+REDIS_URL=redis://redis:6379
+
+IDENTITY_PROVIDER_URL=http://identity-provider:8001
+STOCK_SERVICE_URL=http://stock-service:8002
+KITCHEN_QUEUE_URL=http://kitchen-queue:8004
+NOTIFICATION_HUB_URL=http://notification-hub:8005
+ORDER_GATEWAY_URL=http://order-gateway:8003
+
+================================================================================
+## INFRASTRUCTURE
+================================================================================
+
+Services depend on:
+- PostgreSQL 15 (Port 5432)
+- Redis 7 Alpine (Port 6379)
+
+Both have service healthchecks to ensure they're ready before microservices start.
+
+================================================================================

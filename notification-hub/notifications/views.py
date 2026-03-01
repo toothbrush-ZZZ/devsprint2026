@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
+from .permissions import IsAdminUser
 import redis
 import os
 
@@ -138,6 +139,11 @@ def health(request):
     Checks Redis and channel layer are working.
     Returns 200 if all good, 503 if anything is down.
     """
+    try:
+        if redis_client.get('chaos_mode') == b'1':
+            return Response({"error": "Service in chaos mode"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+    except Exception:
+        pass
     redis_status = "ok"
     channel_status = "ok"
 
@@ -188,3 +194,25 @@ def metrics(request):
         "failed_notifications": failed_notifications,
         "status": "running"
     })
+
+# ─────────────────────────────────────────
+# CHAOS TOGGLE
+# admins only
+# ─────────────────────────────────────────
+@api_view(['POST'])
+@permission_classes([IsAdminUser])
+def toggle_chaos(request):
+    """
+    POST /chaos/
+    Manual trigger to kill the service for fault tolerance testing.
+    """
+    try:
+        current = redis_client.get('chaos_mode')
+        if current and current == b'1':
+            redis_client.delete('chaos_mode')
+            return Response({"status": "Chaos mode disabled"})
+        else:
+            redis_client.set('chaos_mode', '1', ex=60) # 60 seconds
+            return Response({"status": "Chaos mode enabled for 60s"})
+    except Exception as e:
+        return Response({"error": f"Failed to toggle chaos: {e}"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)

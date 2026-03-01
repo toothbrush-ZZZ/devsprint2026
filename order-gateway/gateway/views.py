@@ -54,7 +54,7 @@ def get_stock_from_service(item_id, token):
         return None
 
 
-def notify_status(order_id, student_id, status_update):
+def notify_status(order_id, student_id, status_update, item_name=""):
   
     try:
         requests.post(
@@ -62,7 +62,8 @@ def notify_status(order_id, student_id, status_update):
             json={
                 "order_id": order_id,
                 "student_id": student_id,
-                "status": status_update
+                "status": status_update,
+                "item_name": item_name
             },
             timeout=3
         )
@@ -169,7 +170,7 @@ def place_order(request):
         idempotency_key=idempotency_key
     )
 
-    notify_status(order.id, student_id, 'pending')
+    notify_status(order.id, student_id, 'pending', order.item_name)
 
     
     # STEP 4 — DECREMENT STOCK
@@ -196,7 +197,7 @@ def place_order(request):
         order.status = 'stock_verified'
         order.save()
 
-        notify_status(order.id, student_id, 'stock_verified')
+        notify_status(order.id, student_id, 'stock_verified', order.item_name)
 
     except requests.exceptions.Timeout:
         # Stock Service took too long
@@ -237,7 +238,7 @@ def place_order(request):
         if kitchen_response.status_code in [200, 201]:
             order.status = 'in_kitchen'
             order.save()
-            notify_status(order.id, student_id, 'in_kitchen')
+            notify_status(order.id, student_id, 'in_kitchen', order.item_name)
         else:
             # Kitchen failed — restore stock to prevent loss
             try:
@@ -367,7 +368,7 @@ def get_all_orders(request):
 # used by Kitchen Queue to update order status
 # ─────────────────────────────────────────
 @api_view(['PATCH'])
-@permission_classes([IsStudent])
+@permission_classes([AllowAny])
 def update_order_status(request, order_id):
     """
     PATCH /order/{order_id}/status/
@@ -387,7 +388,7 @@ def update_order_status(request, order_id):
         order.status = new_status
         order.save()
 
-        notify_status(order.id, order.student_id, new_status)
+        notify_status(order.id, order.student_id, new_status, order.item_name)
 
         return Response({
             "success": True,
@@ -467,7 +468,7 @@ def cancel_order(request, order_id):
     order.status = 'cancelled'
     order.save()
 
-    notify_status(order.id, order.student_id, 'cancelled')
+    notify_status(order.id, order.student_id, 'cancelled', order.item_name)
 
     return Response({
         "success": True,
@@ -493,6 +494,11 @@ def health(request):
     Checks database, Redis, and all downstream services.
     Returns 200 if all good, 503 if anything is down.
     """
+    try:
+        if redis_client.get('chaos_mode') == b'1':
+            return Response({"error": "Service in chaos mode"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+    except Exception:
+        pass
     db_status = "ok"
     redis_status = "ok"
     stock_status = "ok"
@@ -602,3 +608,25 @@ def metrics(request):
         "avg_response_time_seconds": round(avg_response, 4),
         "status": "running"
     })
+
+# ─────────────────────────────────────────
+# CHAOS TOGGLE
+# admins only
+# ─────────────────────────────────────────
+@api_view(['POST'])
+@permission_classes([IsAdminUser])
+def toggle_chaos(request):
+    """
+    POST /chaos/
+    Manual trigger to kill the service for fault tolerance testing.
+    """
+    try:
+        current = redis_client.get('chaos_mode')
+        if current and current == b'1':
+            redis_client.delete('chaos_mode')
+            return Response({"status": "Chaos mode disabled"})
+        else:
+            redis_client.set('chaos_mode', '1', ex=60) # 60 seconds
+            return Response({"status": "Chaos mode enabled for 60s"})
+    except Exception as e:
+        return Response({"error": f"Failed to toggle chaos: {e}"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)

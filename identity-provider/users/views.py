@@ -7,6 +7,7 @@ from rest_framework_simplejwt.exceptions import TokenError
 from django.contrib.auth import authenticate
 from django.contrib.auth.hashers import make_password
 from .models import Student
+from .permissions import IsAdminUser
 import redis
 import os
 
@@ -143,6 +144,11 @@ def health(request):
     Returns 503 if database is down
     """
     try:
+        if redis_client.get('chaos_mode') == b'1':
+            return Response({"error": "Service in chaos mode"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+    except Exception:
+        pass
+    try:
         Student.objects.count()
         return Response({"status": "ok", "database": "reachable"})
     except Exception as e:
@@ -169,3 +175,25 @@ def metrics(request):
         "total_students": total_students,
         "status": "running"
     })
+
+# ─────────────────────────────────────────
+# CHAOS TOGGLE
+# admins only
+# ─────────────────────────────────────────
+@api_view(['POST'])
+@permission_classes([IsAdminUser])
+def toggle_chaos(request):
+    """
+    POST /chaos/
+    Manual trigger to kill the service for fault tolerance testing.
+    """
+    try:
+        current = redis_client.get('chaos_mode')
+        if current and current == b'1':
+            redis_client.delete('chaos_mode')
+            return Response({"status": "Chaos mode disabled"})
+        else:
+            redis_client.set('chaos_mode', '1', ex=60) # 60 seconds
+            return Response({"status": "Chaos mode enabled for 60s"})
+    except Exception as e:
+        return Response({"error": f"Failed to toggle chaos: {e}"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)

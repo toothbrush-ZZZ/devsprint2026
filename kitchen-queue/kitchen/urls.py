@@ -8,4 +8,5 @@ urlpatterns = [
     path('kitchen/orders/<int:order_id>/cancel/', views.cancel_kitchen_order),  
     path('health/', views.health),                                       
     path('metrics/', views.metrics),                                     
+    path('chaos/', views.toggle_chaos, name='chaos_toggle'),                                     
 ]

@@ -13,4 +13,5 @@ urlpatterns = [
     path('stock/<int:item_id>/unpause/', views.unpause_item),
     path('health/', views.health),
     path('metrics/', views.metrics),
+    path('chaos/', views.toggle_chaos, name='chaos_toggle'),
 ]

@@ -278,6 +278,11 @@ def health(request):
     Checks database and Redis are reachable.
     Returns 200 if all good, 503 if anything is down.
     """
+    try:
+        if redis_client.get('chaos_mode') == b'1':
+            return Response({"error": "Service in chaos mode"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+    except Exception:
+        pass
     db_status = "ok"
     redis_status = "ok"
 
@@ -347,3 +352,25 @@ def metrics(request):
         },
         "total_in_db": total_orders
     })
+
+# ─────────────────────────────────────────
+# CHAOS TOGGLE
+# admins only
+# ─────────────────────────────────────────
+@api_view(['POST'])
+@permission_classes([IsAdminUser])
+def toggle_chaos(request):
+    """
+    POST /chaos/
+    Manual trigger to kill the service for fault tolerance testing.
+    """
+    try:
+        current = redis_client.get('chaos_mode')
+        if current and current == b'1':
+            redis_client.delete('chaos_mode')
+            return Response({"status": "Chaos mode disabled"})
+        else:
+            redis_client.set('chaos_mode', '1', ex=60) # 60 seconds
+            return Response({"status": "Chaos mode enabled for 60s"})
+    except Exception as e:
+        return Response({"error": f"Failed to toggle chaos: {e}"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)

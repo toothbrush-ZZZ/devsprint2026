@@ -9,4 +9,5 @@ urlpatterns = [
     path('orders/', views.get_all_orders),
     path('health/', views.health),
     path('metrics/', views.metrics),
+    path('chaos/', views.toggle_chaos, name='chaos_toggle'),
 ]

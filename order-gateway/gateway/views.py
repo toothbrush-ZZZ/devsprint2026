@@ -111,6 +111,23 @@ def place_order(request):
             status=status.HTTP_400_BAD_REQUEST
         )
 
+    # CHECK — ONE ACTIVE ORDER PER STUDENT
+    active_order = Order.objects.filter(
+        student_id=student_id,
+        status__in=['pending', 'stock_verified', 'in_kitchen']
+    ).first()
+
+    if active_order:
+        return Response(
+            {
+                "error": "You already have an active order being processed.",
+                "existing_order_id": active_order.id,
+                "existing_order_status": active_order.status,
+                "item_name": active_order.item_name
+            },
+            status=status.HTTP_409_CONFLICT
+        )
+
 
     # STEP 1 — HIGH SPEED CACHE STOCK CHECK (redis)
     cached_quantity = get_stock_from_cache(item_id)

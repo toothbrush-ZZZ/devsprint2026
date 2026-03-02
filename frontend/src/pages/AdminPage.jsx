@@ -56,7 +56,7 @@ const AdminPage = ({ user, onLogout }) => {
                 // Skip the initial handshake message
                 if (data.type === 'connected') return;
                 if (data.order_id) {
-                    showNotification(`🔔 New order #${data.order_id} received!`);
+                    showNotification(`New order #${data.order_id} received!`);
                     fetchOrders();
                 }
             } catch (e) {
@@ -88,11 +88,11 @@ const AdminPage = ({ user, onLogout }) => {
                 price: parseFloat(newItem.price),
                 quantity: parseInt(newItem.quantity),
             }, user.access_token);
-            showNotification(`✅ Item "${newItem.name}" created!`);
+            showNotification(`Item "${newItem.name}" created!`);
             setNewItem({ name: '', price: '', quantity: '' });
             fetchInventory();
         } catch (err) {
-            showNotification(`❌ ${err.message || 'Failed to create item.'}`);
+            showNotification(err.message || 'Failed to create item.');
         }
     };
 
@@ -100,10 +100,10 @@ const AdminPage = ({ user, onLogout }) => {
         if (!window.confirm(`Delete "${name}"?`)) return;
         try {
             await api.delete('stock', `/items/${id}/delete/`, user.access_token);
-            showNotification(`🗑️ Item deleted.`);
+            showNotification('Item deleted.');
             fetchInventory();
         } catch (err) {
-            showNotification(`❌ ${err.message || 'Failed to delete item.'}`);
+            showNotification(err.message || 'Failed to delete item.');
         }
     };
 
@@ -117,18 +117,18 @@ const AdminPage = ({ user, onLogout }) => {
             }
             const qty = parseInt(quantity, 10);
             if (!qty || qty <= 0) {
-                showNotification('❌ Please enter a positive number.');
+                showNotification('Please enter a positive number.');
                 return;
             }
             body = { quantity: qty };
         }
         try {
             await api.post('stock', `/stock/${id}/${action}/`, body, user.access_token);
-            showNotification(`✅ Stock ${action} successful.`);
+            showNotification(`Stock ${action} successful.`);
             setEditingStockId(null);
             fetchInventory();
         } catch (err) {
-            showNotification(`❌ Failed to ${action} stock: ${err.message}`);
+            showNotification(`Failed to ${action} stock: ${err.message}`);
         }
     };
 
@@ -144,10 +144,10 @@ const AdminPage = ({ user, onLogout }) => {
     const handleMarkReady = async (orderId) => {
         try {
             await api.patch('kitchen', `/kitchen/orders/${orderId}/ready/`, {}, user.access_token);
-            showNotification(`✅ Order #${orderId} marked as ready!`);
+            showNotification(`Order #${orderId} marked as ready!`);
             fetchOrders();
         } catch (err) {
-            showNotification(`❌ ${err.message || 'Failed to update order.'}`);
+            showNotification(err.message || 'Failed to update order.');
         }
     };
 
@@ -155,10 +155,10 @@ const AdminPage = ({ user, onLogout }) => {
         if (!window.confirm(`Cancel order #${orderId}?`)) return;
         try {
             await api.delete('order', `/order/${orderId}/cancel/`, user.access_token);
-            showNotification(`🚫 Order #${orderId} cancelled.`);
+            showNotification(`Order #${orderId} cancelled.`);
             fetchOrders();
         } catch (err) {
-            showNotification(`❌ ${err.message || 'Failed to cancel order.'}`);
+            showNotification(err.message || 'Failed to cancel order.');
         }
     };
 
@@ -170,9 +170,9 @@ const AdminPage = ({ user, onLogout }) => {
             const data = await api.post(serviceKey, '/chaos/', {}, user.access_token);
             const isEnabled = data.status?.toLowerCase().includes('enabled');
             setChaosState(prev => ({ ...prev, [serviceKey]: isEnabled }));
-            showNotification(`⚡ ${data.status}`);
+            showNotification(data.status);
         } catch (err) {
-            showNotification(`❌ Chaos toggle failed for ${serviceKey}: ${err.message}`);
+            showNotification(`Chaos toggle failed for ${serviceKey}: ${err.message}`);
         } finally {
             setChaosLoading(prev => ({ ...prev, [serviceKey]: false }));
         }
@@ -226,23 +226,23 @@ const AdminPage = ({ user, onLogout }) => {
                 student_id: rpStudentId,
                 new_password: rpNew,
             }, user.access_token);
-            setRpMsg('✅ ' + (res.message || 'Password reset successfully!'));
+            setRpMsg('success:' + (res.message || 'Password reset successfully!'));
             setRpStudentId('');
             setRpNew('');
         } catch (err) {
-            setRpMsg('❌ ' + (err.message || 'Failed to reset password.'));
+            setRpMsg('error:' + (err.message || 'Failed to reset password.'));
         }
     };
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     const TABS = [
-        { id: 'inventory', label: '📦 Inventory' },
-        { id: 'kitchen',   label: '🍳 Kitchen' },
-        { id: 'chaos',     label: '⚡ Chaos' },
-        { id: 'health',    label: '❤️ Health' },
-        { id: 'metrics',   label: '📊 Metrics' },
-        { id: 'admin',     label: '🔑 Admin Tools' },
+        { id: 'inventory', label: 'Inventory' },
+        { id: 'kitchen',   label: 'Kitchen' },
+        { id: 'chaos',     label: 'Chaos' },
+        { id: 'health',    label: 'Health' },
+        { id: 'metrics',   label: 'Metrics' },
+        { id: 'admin',     label: 'Admin Tools' },
     ];
 
     const activeKitchenOrders = orders.filter(o => o.status !== 'ready' && o.status !== 'cancelled' && o.status !== 'failed');
@@ -251,296 +251,312 @@ const AdminPage = ({ user, onLogout }) => {
         <div style={styles.page}>
             {/* ── Header ── */}
             <header style={styles.header}>
-                <div>
-                    <h1 className="vibrant-text" style={styles.logo}>Admin Hub</h1>
-                    <p style={styles.welcome}>Managing DevSprint Cafeteria · {user.student_id}</p>
+                <div style={styles.headerInner}>
+                    <div style={styles.headerLeft}>
+                        <div style={styles.logoMark}>IUT</div>
+                        <div>
+                            <h1 style={styles.headerTitle}>Admin Dashboard</h1>
+                            <p style={styles.headerSub}>IUT Cafeteria · {user.student_id}</p>
+                        </div>
+                    </div>
+                    <button style={styles.logoutBtn} onClick={onLogout}>Sign Out</button>
                 </div>
-                <button className="btn-primary" onClick={onLogout}>Logout</button>
             </header>
 
-            {/* ── Tab Bar ── */}
-            <div style={styles.tabBar}>
-                {TABS.map(t => (
-                    <button
-                        key={t.id}
-                        onClick={() => setActiveTab(t.id)}
-                        style={{
-                            ...styles.tabBtn,
-                            ...(activeTab === t.id ? styles.tabBtnActive : {})
-                        }}
-                    >
-                        {t.label}
-                    </button>
-                ))}
-            </div>
+            <div style={styles.contentWrap}>
+                {/* ── Tab Bar ── */}
+                <div style={styles.tabBar}>
+                    {TABS.map(t => (
+                        <button
+                            key={t.id}
+                            onClick={() => setActiveTab(t.id)}
+                            style={{
+                                ...styles.tabBtn,
+                                ...(activeTab === t.id ? styles.tabBtnActive : {})
+                            }}
+                        >
+                            {t.label}
+                        </button>
+                    ))}
+                </div>
 
-            {/* ── Content ── */}
-            <main style={styles.main}>
+                {/* ── Content ── */}
+                <main style={styles.main}>
 
-                {/* ── INVENTORY ── */}
-                {activeTab === 'inventory' && (
-                    <div style={styles.inventoryGrid}>
-                        <section className="glass-card" style={styles.panel}>
-                            <h3 style={styles.panelTitle}>Add New Item</h3>
-                            <form onSubmit={handleCreateItem} style={styles.form}>
-                                <input style={styles.input} placeholder="Name" value={newItem.name} onChange={e => setNewItem({ ...newItem, name: e.target.value })} required />
-                                <input style={styles.input} placeholder="Price (৳)" type="number" step="0.01" value={newItem.price} onChange={e => setNewItem({ ...newItem, price: e.target.value })} required />
-                                <input style={styles.input} placeholder="Initial Stock" type="number" value={newItem.quantity} onChange={e => setNewItem({ ...newItem, quantity: e.target.value })} required />
-                                <button type="submit" className="btn-primary">Create Item</button>
-                            </form>
-                        </section>
+                    {/* ── INVENTORY ── */}
+                    {activeTab === 'inventory' && (
+                        <div style={styles.inventoryGrid}>
+                            <section className="card" style={styles.panel}>
+                                <h3 style={styles.panelTitle}>Add New Item</h3>
+                                <form onSubmit={handleCreateItem} style={styles.form}>
+                                    <input style={styles.input} placeholder="Name" value={newItem.name} onChange={e => setNewItem({ ...newItem, name: e.target.value })} required />
+                                    <input style={styles.input} placeholder="Price (৳)" type="number" step="0.01" value={newItem.price} onChange={e => setNewItem({ ...newItem, price: e.target.value })} required />
+                                    <input style={styles.input} placeholder="Initial Stock" type="number" value={newItem.quantity} onChange={e => setNewItem({ ...newItem, quantity: e.target.value })} required />
+                                    <button type="submit" className="btn-primary">Create Item</button>
+                                </form>
+                            </section>
 
-                        <section>
-                            <h3 style={styles.panelTitle}>Menu & Stock</h3>
-                            <div style={styles.tableWrapper}>
-                                <table style={styles.table}>
-                                    <thead>
-                                        <tr>
-                                            <th style={styles.th}>Name</th>
-                                            <th style={styles.th}>Price</th>
-                                            <th style={styles.th}>Stock</th>
-                                            <th style={styles.th}>Status</th>
-                                            <th style={styles.th}>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {items.map(item => (
-                                            <tr key={item.id} style={styles.tr}>
-                                                <td style={styles.td}>{item.name}</td>
-                                                <td style={styles.td}>৳{item.price}</td>
-                                                <td style={styles.td}>{item.quantity}</td>
-                                                <td style={styles.td}>
-                                                    <span style={{ ...styles.badge, background: item.available ? '#dcfce7' : '#fee2e2', color: item.available ? '#166534' : '#991b1b' }}>
-                                                        {item.available ? 'Active' : 'Paused'}
-                                                    </span>
-                                                </td>
-                                                <td style={styles.td}>
-                                                    {editingStockId === item.id ? (
-                                                        <div style={styles.inlineEdit}>
-                                                            <input
-                                                                type="number"
-                                                                style={styles.inlineInput}
-                                                                value={stockEditValue}
-                                                                onChange={e => setStockEditValue(e.target.value)}
-                                                                autoFocus
-                                                            />
-                                                            <button onClick={() => handleStockAction(item.id, 'add', stockEditValue)} style={styles.confirmBtn} title="Confirm">✅</button>
-                                                            <button onClick={() => setEditingStockId(null)} style={styles.cancelBtn} title="Cancel">❌</button>
-                                                        </div>
-                                                    ) : (
-                                                        <div style={styles.actionGroup}>
-                                                            <button onClick={() => handleStockAction(item.id, 'add')} style={styles.iconBtn} title="Add stock">➕</button>
-                                                            <button onClick={() => handleStockAction(item.id, item.available ? 'pause' : 'unpause')} style={styles.iconBtn} title={item.available ? 'Pause' : 'Unpause'}>
-                                                                {item.available ? '⏸️' : '▶️'}
-                                                            </button>
-                                                            <button onClick={() => handleDeleteItem(item.id, item.name)} style={styles.iconBtn} title="Delete">🗑️</button>
-                                                        </div>
-                                                    )}
-                                                </td>
+                            <section>
+                                <h3 style={styles.panelTitle}>Menu & Stock</h3>
+                                <div style={styles.tableWrapper}>
+                                    <table style={styles.table}>
+                                        <thead>
+                                            <tr>
+                                                <th style={styles.th}>Name</th>
+                                                <th style={styles.th}>Price</th>
+                                                <th style={styles.th}>Stock</th>
+                                                <th style={styles.th}>Status</th>
+                                                <th style={styles.th}>Actions</th>
                                             </tr>
-                                        ))}
-                                        {items.length === 0 && (
-                                            <tr><td colSpan={5} style={{ ...styles.td, color: '#94a3b8', textAlign: 'center', padding: '2rem' }}>No items yet</td></tr>
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </section>
-                    </div>
-                )}
-
-                {/* ── KITCHEN ── */}
-                {activeTab === 'kitchen' && (
-                    <div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                            <h3 style={styles.panelTitle}>Live Kitchen Queue ({activeKitchenOrders.length} active)</h3>
-                            <button className="btn-primary" style={{ background: '#6366f1' }} onClick={fetchOrders}>🔄 Refresh</button>
-                        </div>
-                        <div style={styles.orderGrid}>
-                            {activeKitchenOrders.map(order => (
-                                <div key={order.order_id} className="glass-card floating" style={styles.orderCard}>
-                                    <div style={styles.orderCardHeader}>
-                                        <span style={{ fontWeight: '800', color: '#e63946' }}>#{order.order_id}</span>
-                                        <span style={{ color: '#64748b', fontSize: '0.8rem' }}>{order.student_id}</span>
-                                    </div>
-                                    <h4 style={{ fontSize: '1.1rem', margin: '0.5rem 0' }}>{order.item_name || 'Meal'}</h4>
-                                    <span style={{ ...styles.badge, background: '#fef9c3', color: '#854d0e', fontSize: '0.75rem', marginBottom: '1rem', display: 'inline-block' }}>
-                                        {(order.status || '').replace('_', ' ').toUpperCase()}
-                                    </span>
-                                    <div style={{ display: 'flex', gap: '0.5rem', flexDirection: 'column' }}>
-                                        <button className="btn-primary" style={styles.fullBtn} onClick={() => handleMarkReady(order.order_id)}>✅ Mark Ready</button>
-                                        <button style={{ ...styles.fullBtn, background: '#fee2e2', color: '#991b1b', borderRadius: '10px', padding: '8px', fontWeight: '600' }} onClick={() => handleCancelOrder(order.order_id)}>🚫 Cancel Order</button>
-                                    </div>
+                                        </thead>
+                                        <tbody>
+                                            {items.map(item => (
+                                                <tr key={item.id} style={styles.tr}>
+                                                    <td style={styles.td}>{item.name}</td>
+                                                    <td style={styles.td}>৳{item.price}</td>
+                                                    <td style={styles.td}>{item.quantity}</td>
+                                                    <td style={styles.td}>
+                                                        <span style={{ ...styles.badge, background: item.available ? '#f0fdf4' : '#fef2f2', color: item.available ? '#166534' : '#991b1b', border: `1px solid ${item.available ? '#bbf7d0' : '#fecaca'}` }}>
+                                                            {item.available ? 'Active' : 'Paused'}
+                                                        </span>
+                                                    </td>
+                                                    <td style={styles.td}>
+                                                        {editingStockId === item.id ? (
+                                                            <div style={styles.inlineEdit}>
+                                                                <input
+                                                                    type="number"
+                                                                    style={styles.inlineInput}
+                                                                    value={stockEditValue}
+                                                                    onChange={e => setStockEditValue(e.target.value)}
+                                                                    autoFocus
+                                                                />
+                                                                <button onClick={() => handleStockAction(item.id, 'add', stockEditValue)} style={styles.actionBtn} title="Confirm">✓</button>
+                                                                <button onClick={() => setEditingStockId(null)} style={{ ...styles.actionBtn, color: '#dc2626' }} title="Cancel">✕</button>
+                                                            </div>
+                                                        ) : (
+                                                            <div style={styles.actionGroup}>
+                                                                <button onClick={() => handleStockAction(item.id, 'add')} style={styles.actionBtn} title="Add stock">+</button>
+                                                                <button onClick={() => handleStockAction(item.id, item.available ? 'pause' : 'unpause')} style={styles.actionBtn} title={item.available ? 'Pause' : 'Unpause'}>
+                                                                    {item.available ? '⏸' : '▶'}
+                                                                </button>
+                                                                <button onClick={() => handleDeleteItem(item.id, item.name)} style={{ ...styles.actionBtn, color: '#dc2626' }} title="Delete">✕</button>
+                                                            </div>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                            {items.length === 0 && (
+                                                <tr><td colSpan={5} style={{ ...styles.td, color: '#94a3b8', textAlign: 'center', padding: '2rem' }}>No items yet</td></tr>
+                                            )}
+                                        </tbody>
+                                    </table>
                                 </div>
-                            ))}
-                            {activeKitchenOrders.length === 0 && (
-                                <p style={{ color: '#64748b', fontStyle: 'italic' }}>No active orders in kitchen. 🎉</p>
-                            )}
+                            </section>
                         </div>
-                    </div>
-                )}
+                    )}
 
-                {/* ── CHAOS TOGGLE ── */}
-                {activeTab === 'chaos' && (
-                    <div>
-                        <h3 style={{ ...styles.panelTitle, marginBottom: '1.5rem' }}>⚡ Chaos Mode Control</h3>
-                        <p style={{ color: '#64748b', marginBottom: '2rem', fontSize: '0.95rem' }}>
-                            Toggle chaos mode per service to simulate failures for fault-tolerance testing.
-                            Each toggle lasts <strong>60 seconds</strong>.
-                        </p>
-                        <div style={styles.chaosGrid}>
-                            {SERVICES.map(svc => {
-                                const isOn = !!chaosState[svc.key];
-                                const isLoading = !!chaosLoading[svc.key];
-                                return (
-                                    <div key={svc.key} className="glass-card" style={styles.chaosCard}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
-                                            <div>
-                                                <h4 style={{ fontSize: '1rem', color: '#1d3557' }}>{svc.label}</h4>
-                                                <p style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Port {svc.port}</p>
-                                            </div>
-                                            <span style={{
-                                                padding: '3px 10px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: '700',
-                                                background: isOn ? '#fee2e2' : '#dcfce7',
-                                                color: isOn ? '#991b1b' : '#166534'
-                                            }}>
-                                                {isOn ? 'CHAOS ON' : 'STABLE'}
-                                            </span>
+                    {/* ── KITCHEN ── */}
+                    {activeTab === 'kitchen' && (
+                        <div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                                <h3 style={styles.panelTitle}>Live Kitchen Queue ({activeKitchenOrders.length} active)</h3>
+                                <button className="btn-primary" onClick={fetchOrders}>Refresh</button>
+                            </div>
+                            <div style={styles.orderGrid}>
+                                {activeKitchenOrders.map(order => (
+                                    <div key={order.order_id} className="card" style={styles.orderCard}>
+                                        <div style={styles.orderCardHeader}>
+                                            <span style={{ fontWeight: '700', color: '#1a6137' }}>#{order.order_id}</span>
+                                            <span style={{ color: '#5a6474', fontSize: '0.8rem' }}>{order.student_id}</span>
                                         </div>
-                                        <button
-                                            onClick={() => handleChaosToggle(svc.key)}
-                                            disabled={isLoading}
-                                            style={{
-                                                width: '100%', padding: '10px', borderRadius: '10px', fontWeight: '700',
-                                                background: isOn ? '#dcfce7' : '#fee2e2',
-                                                color: isOn ? '#166534' : '#991b1b',
-                                                border: `2px solid ${isOn ? '#86efac' : '#fca5a5'}`,
-                                                opacity: isLoading ? 0.6 : 1,
-                                                cursor: isLoading ? 'not-allowed' : 'pointer',
-                                            }}
-                                        >
-                                            {isLoading ? '⏳ Toggling...' : isOn ? '✅ Disable Chaos' : '☠️ Enable Chaos'}
+                                        <h4 style={{ fontSize: '1.05rem', margin: '0.5rem 0' }}>{order.item_name || 'Meal'}</h4>
+                                        <span style={{ ...styles.badge, background: '#fffbeb', color: '#92400e', border: '1px solid #fde68a', fontSize: '0.72rem', marginBottom: '1rem', display: 'inline-block' }}>
+                                            {(order.status || '').replace('_', ' ').toUpperCase()}
+                                        </span>
+                                        <div style={{ display: 'flex', gap: '0.5rem', flexDirection: 'column' }}>
+                                            <button className="btn-primary" style={styles.fullBtn} onClick={() => handleMarkReady(order.order_id)}>Mark Ready</button>
+                                            <button style={{ ...styles.fullBtn, background: '#fef2f2', color: '#991b1b', borderRadius: '6px', padding: '8px', fontWeight: '600', border: '1px solid #fecaca' }} onClick={() => handleCancelOrder(order.order_id)}>Cancel Order</button>
+                                        </div>
+                                    </div>
+                                ))}
+                                {activeKitchenOrders.length === 0 && (
+                                    <p style={{ color: '#5a6474', fontStyle: 'italic' }}>No active orders in kitchen.</p>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ── CHAOS TOGGLE ── */}
+                    {activeTab === 'chaos' && (
+                        <div>
+                            <h3 style={{ ...styles.panelTitle, marginBottom: '0.5rem' }}>Chaos Mode Control</h3>
+                            <p style={{ color: '#5a6474', marginBottom: '1.5rem', fontSize: '0.88rem' }}>
+                                Toggle chaos mode per service to simulate failures for fault-tolerance testing.
+                                Each toggle lasts <strong>60 seconds</strong>.
+                            </p>
+                            <div style={styles.serviceGrid}>
+                                {SERVICES.map(svc => {
+                                    const isOn = !!chaosState[svc.key];
+                                    const isLoading = !!chaosLoading[svc.key];
+                                    return (
+                                        <div key={svc.key} className="card" style={styles.serviceCard}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+                                                <div>
+                                                    <h4 style={{ fontSize: '0.95rem', color: '#1a1a2e', fontWeight: '600' }}>{svc.label}</h4>
+                                                    <p style={{ fontSize: '0.78rem', color: '#94a3b8' }}>Port {svc.port}</p>
+                                                </div>
+                                                <span style={{
+                                                    padding: '3px 10px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: '700',
+                                                    background: isOn ? '#fef2f2' : '#f0fdf4',
+                                                    color: isOn ? '#991b1b' : '#166534',
+                                                    border: `1px solid ${isOn ? '#fecaca' : '#bbf7d0'}`,
+                                                }}>
+                                                    {isOn ? 'CHAOS ON' : 'STABLE'}
+                                                </span>
+                                            </div>
+                                            <button
+                                                onClick={() => handleChaosToggle(svc.key)}
+                                                disabled={isLoading}
+                                                style={{
+                                                    width: '100%', padding: '9px', borderRadius: '6px', fontWeight: '600',
+                                                    fontSize: '0.85rem',
+                                                    background: isOn ? '#f0fdf4' : '#fef2f2',
+                                                    color: isOn ? '#166534' : '#991b1b',
+                                                    border: `1.5px solid ${isOn ? '#bbf7d0' : '#fecaca'}`,
+                                                    opacity: isLoading ? 0.6 : 1,
+                                                    cursor: isLoading ? 'not-allowed' : 'pointer',
+                                                }}
+                                            >
+                                                {isLoading ? 'Toggling...' : isOn ? 'Disable Chaos' : 'Enable Chaos'}
+                                            </button>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ── HEALTH ── */}
+                    {activeTab === 'health' && (
+                        <div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                                <h3 style={styles.panelTitle}>Service Health</h3>
+                                <button className="btn-primary" onClick={fetchAllHealth} disabled={healthLoading}>
+                                    {healthLoading ? 'Checking...' : 'Refresh'}
+                                </button>
+                            </div>
+                            <div style={styles.serviceGrid}>
+                                {SERVICES.map(svc => {
+                                    const h = healthData[svc.key];
+                                    return (
+                                        <div key={svc.key} className="card" style={styles.serviceCard}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                                                <h4 style={{ fontSize: '0.95rem', color: '#1a1a2e', fontWeight: '600' }}>{svc.label}</h4>
+                                                <span style={{
+                                                    padding: '3px 10px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: '700',
+                                                    background: !h ? '#f3f4f6' : h.ok ? '#f0fdf4' : '#fef2f2',
+                                                    color: !h ? '#6b7280' : h.ok ? '#166534' : '#991b1b',
+                                                    border: `1px solid ${!h ? '#e5e7eb' : h.ok ? '#bbf7d0' : '#fecaca'}`,
+                                                }}>
+                                                    {!h ? 'UNKNOWN' : h.ok ? 'HEALTHY' : 'DOWN'}
+                                                </span>
+                                            </div>
+                                            {h?.data && (
+                                                <pre style={styles.jsonPre}>{JSON.stringify(h.data, null, 2)}</pre>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ── METRICS ── */}
+                    {activeTab === 'metrics' && (
+                        <div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                                <h3 style={styles.panelTitle}>Service Metrics</h3>
+                                <button className="btn-primary" onClick={fetchAllMetrics} disabled={metricsLoading}>
+                                    {metricsLoading ? 'Fetching...' : 'Refresh'}
+                                </button>
+                            </div>
+                            <div style={styles.serviceGrid}>
+                                {SERVICES.map(svc => {
+                                    const m = metricsData[svc.key];
+                                    return (
+                                        <div key={svc.key} className="card" style={styles.serviceCard}>
+                                            <h4 style={{ fontSize: '0.95rem', color: '#1a1a2e', marginBottom: '0.75rem', fontWeight: '600' }}>{svc.label}</h4>
+                                            {m ? (
+                                                <pre style={styles.jsonPre}>{JSON.stringify(m, null, 2)}</pre>
+                                            ) : (
+                                                <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>
+                                                    {metricsLoading ? 'Loading...' : '— Unavailable —'}
+                                                </p>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ── ADMIN TOOLS ── */}
+                    {activeTab === 'admin' && (
+                        <div style={{ maxWidth: '520px' }}>
+                            <h3 style={{ ...styles.panelTitle, marginBottom: '1.5rem' }}>Admin Tools</h3>
+
+                            {/* Reset any student's password */}
+                            <div className="card" style={{ padding: '1.75rem' }}>
+                                <h4 style={{ color: '#1a1a2e', marginBottom: '0.5rem', fontWeight: '600' }}>Reset Student Password</h4>
+                                <p style={{ color: '#5a6474', fontSize: '0.85rem', marginBottom: '1.25rem' }}>
+                                    Reset any student's password without needing their old password.
+                                </p>
+                                <form onSubmit={handleAdminResetPassword} style={styles.form}>
+                                    <input
+                                        style={styles.input}
+                                        placeholder="Student ID (e.g. 210041001)"
+                                        value={rpStudentId}
+                                        onChange={e => setRpStudentId(e.target.value)}
+                                        required
+                                    />
+                                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                                        <input
+                                            type={showRpNew ? 'text' : 'password'}
+                                            style={{ ...styles.input, paddingRight: '42px', flex: 1 }}
+                                            placeholder="New password (min 4 chars)"
+                                            value={rpNew}
+                                            onChange={e => setRpNew(e.target.value)}
+                                            required
+                                            minLength={4}
+                                        />
+                                        <button type="button" onClick={() => setShowRpNew(!showRpNew)} style={{ position: 'absolute', right: '10px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1rem' }}>
+                                            {showRpNew ? '🙈' : '👁️'}
                                         </button>
                                     </div>
-                                );
-                            })}
-                        </div>
-                    </div>
-                )}
-
-                {/* ── HEALTH ── */}
-                {activeTab === 'health' && (
-                    <div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                            <h3 style={styles.panelTitle}>❤️ Service Health</h3>
-                            <button className="btn-primary" style={{ background: '#6366f1' }} onClick={fetchAllHealth} disabled={healthLoading}>
-                                {healthLoading ? '⏳ Checking...' : '🔄 Refresh'}
-                            </button>
-                        </div>
-                        <div style={styles.chaosGrid}>
-                            {SERVICES.map(svc => {
-                                const h = healthData[svc.key];
-                                return (
-                                    <div key={svc.key} className="glass-card" style={styles.chaosCard}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                                            <h4 style={{ fontSize: '1rem', color: '#1d3557' }}>{svc.label}</h4>
-                                            <span style={{
-                                                padding: '3px 10px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: '700',
-                                                background: !h ? '#f1f5f9' : h.ok ? '#dcfce7' : '#fee2e2',
-                                                color: !h ? '#94a3b8' : h.ok ? '#166534' : '#991b1b',
-                                            }}>
-                                                {!h ? 'UNKNOWN' : h.ok ? '✅ OK' : '❌ DOWN'}
-                                            </span>
-                                        </div>
-                                        {h?.data && (
-                                            <pre style={styles.jsonPre}>{JSON.stringify(h.data, null, 2)}</pre>
-                                        )}
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </div>
-                )}
-
-                {/* ── METRICS ── */}
-                {activeTab === 'metrics' && (
-                    <div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                            <h3 style={styles.panelTitle}>📊 Service Metrics</h3>
-                            <button className="btn-primary" style={{ background: '#6366f1' }} onClick={fetchAllMetrics} disabled={metricsLoading}>
-                                {metricsLoading ? '⏳ Fetching...' : '🔄 Refresh'}
-                            </button>
-                        </div>
-                        <div style={styles.chaosGrid}>
-                            {SERVICES.map(svc => {
-                                const m = metricsData[svc.key];
-                                return (
-                                    <div key={svc.key} className="glass-card" style={styles.chaosCard}>
-                                        <h4 style={{ fontSize: '1rem', color: '#1d3557', marginBottom: '0.75rem' }}>{svc.label}</h4>
-                                        {m ? (
-                                            <pre style={styles.jsonPre}>{JSON.stringify(m, null, 2)}</pre>
-                                        ) : (
-                                            <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>
-                                                {metricsLoading ? 'Loading...' : '— Unavailable —'}
-                                            </p>
-                                        )}
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </div>
-                )}
-
-                {/* ── ADMIN TOOLS ── */}
-                {activeTab === 'admin' && (
-                    <div style={{ maxWidth: '520px' }}>
-                        <h3 style={{ ...styles.panelTitle, marginBottom: '1.5rem' }}>🔑 Admin Tools</h3>
-
-                        {/* Reset any student's password */}
-                        <div className="glass-card" style={{ padding: '2rem', marginBottom: '1.5rem' }}>
-                            <h4 style={{ color: '#1d3557', marginBottom: '0.5rem' }}>Reset Student Password</h4>
-                            <p style={{ color: '#64748b', fontSize: '0.85rem', marginBottom: '1.25rem' }}>
-                                Reset any student's password without needing their old password.
-                            </p>
-                            <form onSubmit={handleAdminResetPassword} style={styles.form}>
-                                <input
-                                    style={styles.input}
-                                    placeholder="Student ID (e.g. 210041001)"
-                                    value={rpStudentId}
-                                    onChange={e => setRpStudentId(e.target.value)}
-                                    required
-                                />
-                                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                                    <input
-                                        type={showRpNew ? 'text' : 'password'}
-                                        style={{ ...styles.input, paddingRight: '42px', flex: 1 }}
-                                        placeholder="New password (min 4 chars)"
-                                        value={rpNew}
-                                        onChange={e => setRpNew(e.target.value)}
-                                        required
-                                        minLength={4}
-                                    />
-                                    <button type="button" onClick={() => setShowRpNew(!showRpNew)} style={{ position: 'absolute', right: '10px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1rem' }}>
-                                        {showRpNew ? '🙈' : '👁️'}
+                                    {rpMsg && (
+                                        <p style={{
+                                            fontSize: '0.85rem',
+                                            color: rpMsg.startsWith('success:') ? '#16a34a' : '#dc2626',
+                                            padding: '6px 10px',
+                                            borderRadius: '6px',
+                                            background: rpMsg.startsWith('success:') ? '#f0fdf4' : '#fef2f2',
+                                        }}>
+                                            {rpMsg.replace(/^(success:|error:)/, '')}
+                                        </p>
+                                    )}
+                                    <button type="submit" className="btn-primary" style={{ alignSelf: 'flex-start' }}>
+                                        Reset Password
                                     </button>
-                                </div>
-                                {rpMsg && (
-                                    <p style={{ fontSize: '0.875rem', color: rpMsg.startsWith('✅') ? '#16a34a' : '#ef4444' }}>
-                                        {rpMsg}
-                                    </p>
-                                )}
-                                <button type="submit" className="btn-primary" style={{ alignSelf: 'flex-start' }}>
-                                    🔑 Reset Password
-                                </button>
-                            </form>
+                                </form>
+                            </div>
                         </div>
-                    </div>
-                )}
-            </main>
+                    )}
+                </main>
+            </div>
 
             {/* ── Notification Toast ── */}
             {notification && (
-                <div className="glass-card floating" style={styles.toast}>
+                <div className="card" style={styles.toast}>
                     {notification}
                 </div>
             )}
@@ -549,66 +565,119 @@ const AdminPage = ({ user, onLogout }) => {
 };
 
 const styles = {
-    page: { maxWidth: '1300px', margin: '0 auto', padding: '2rem' },
+    page: { minHeight: '100vh', background: '#f5f6f8' },
     header: {
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        marginBottom: '1.5rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '1.5rem',
+        background: '#1a6137',
+        borderBottom: '3px solid #0e4528',
     },
-    logo: { fontSize: '2rem', margin: 0 },
-    welcome: { color: '#64748b', fontSize: '0.9rem' },
+    headerInner: {
+        maxWidth: '1300px',
+        margin: '0 auto',
+        padding: '14px 2rem',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    headerLeft: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
+    },
+    logoMark: {
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: '40px',
+        height: '40px',
+        background: 'rgba(255,255,255,0.2)',
+        color: 'white',
+        borderRadius: '8px',
+        fontSize: '0.85rem',
+        fontWeight: '800',
+        letterSpacing: '0.05em',
+    },
+    headerTitle: {
+        fontSize: '1.25rem',
+        color: 'white',
+        margin: 0,
+        fontWeight: '700',
+    },
+    headerSub: {
+        color: 'rgba(255,255,255,0.7)',
+        fontSize: '0.8rem',
+        margin: 0,
+    },
+    logoutBtn: {
+        padding: '7px 16px',
+        borderRadius: '6px',
+        fontWeight: '600',
+        background: 'white',
+        color: '#1a6137',
+        border: 'none',
+        cursor: 'pointer',
+        fontSize: '0.82rem',
+    },
+    contentWrap: {
+        maxWidth: '1300px',
+        margin: '0 auto',
+        padding: '1.5rem 2rem',
+    },
     tabBar: {
-        display: 'flex', gap: '0.5rem', marginBottom: '2rem', flexWrap: 'wrap',
-        borderBottom: '2px solid #f1f5f9', paddingBottom: '1rem',
+        display: 'flex', gap: '6px', marginBottom: '1.75rem', flexWrap: 'wrap',
+        borderBottom: '1px solid #e0e4e8', paddingBottom: '1rem',
     },
     tabBtn: {
-        padding: '8px 18px', borderRadius: '20px', fontWeight: '600',
-        border: '1.5px solid #e2e8f0', background: 'transparent', color: '#64748b',
-        transition: 'all 0.2s', fontSize: '0.9rem',
+        padding: '7px 18px', borderRadius: '6px', fontWeight: '600',
+        border: '1.5px solid #dce0e5', background: 'transparent', color: '#5a6474',
+        transition: 'all 0.2s', fontSize: '0.85rem',
     },
     tabBtnActive: {
-        background: '#e63946', color: 'white', border: '1.5px solid #e63946',
-        boxShadow: '0 4px 14px rgba(230, 57, 70, 0.3)',
+        background: '#1a6137', color: 'white', border: '1.5px solid #1a6137',
     },
     main: {},
-    panelTitle: { fontSize: '1.3rem', color: '#1d3557', margin: 0 },
-    inventoryGrid: { display: 'grid', gridTemplateColumns: '320px 1fr', gap: '2rem' },
-    panel: { padding: '1.75rem', height: 'fit-content' },
-    form: { display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1.25rem' },
+    panelTitle: { fontSize: '1.15rem', color: '#1a1a2e', margin: 0, fontWeight: '700' },
+    inventoryGrid: { display: 'grid', gridTemplateColumns: '300px 1fr', gap: '2rem' },
+    panel: { padding: '1.5rem', height: 'fit-content' },
+    form: { display: 'flex', flexDirection: 'column', gap: '0.85rem', marginTop: '1rem' },
     input: {
-        padding: '11px 14px', borderRadius: '10px', border: '1.5px solid #e2e8f0',
-        fontSize: '0.95rem', outline: 'none', width: '100%', boxSizing: 'border-box',
+        padding: '9px 12px', borderRadius: '6px', border: '1.5px solid #dce0e5',
+        fontSize: '0.9rem', outline: 'none', width: '100%', boxSizing: 'border-box',
+        background: '#fafbfc',
     },
-    tableWrapper: { marginTop: '1rem', overflowX: 'auto', borderRadius: '12px', border: '1px solid #f1f5f9' },
+    tableWrapper: { marginTop: '1rem', overflowX: 'auto', borderRadius: '8px', border: '1px solid #e0e4e8' },
     table: { width: '100%', borderCollapse: 'collapse', textAlign: 'left' },
-    th: { padding: '12px 16px', color: '#64748b', fontWeight: '600', fontSize: '0.85rem', borderBottom: '2px solid #f1f5f9', background: '#fafafa' },
-    tr: { borderBottom: '1px solid #f1f5f9' },
-    td: { padding: '12px 16px', fontSize: '0.92rem' },
-    badge: { padding: '3px 10px', borderRadius: '20px', fontSize: '0.78rem', fontWeight: '600' },
-    actionGroup: { display: 'flex', gap: '0.35rem' },
-    iconBtn: { background: 'none', fontSize: '1.1rem', padding: '4px 6px', borderRadius: '6px', transition: 'background 0.2s' },
-    orderGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '1.5rem' },
-    orderCard: { padding: '1.5rem' },
+    th: { padding: '10px 16px', color: '#5a6474', fontWeight: '600', fontSize: '0.82rem', borderBottom: '1px solid #e0e4e8', background: '#f8f9fb', textTransform: 'uppercase', letterSpacing: '0.04em' },
+    tr: { borderBottom: '1px solid #eceef1' },
+    td: { padding: '10px 16px', fontSize: '0.9rem' },
+    badge: { padding: '3px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '600' },
+    actionGroup: { display: 'flex', gap: '4px' },
+    actionBtn: {
+        background: '#f5f6f8', fontSize: '0.9rem', padding: '4px 10px', borderRadius: '4px',
+        border: '1px solid #dce0e5', color: '#1a1a2e', cursor: 'pointer', fontWeight: '600',
+        transition: 'background 0.15s',
+    },
+    orderGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '1.25rem' },
+    orderCard: { padding: '1.25rem' },
     orderCardHeader: { display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' },
     fullBtn: { width: '100%' },
-    chaosGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.5rem' },
-    chaosCard: { padding: '1.5rem' },
+    serviceGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.25rem' },
+    serviceCard: { padding: '1.25rem' },
     jsonPre: {
-        background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px',
-        padding: '10px', fontSize: '0.78rem', overflowX: 'auto', color: '#334155',
+        background: '#f8f9fb', border: '1px solid #e0e4e8', borderRadius: '6px',
+        padding: '10px', fontSize: '0.75rem', overflowX: 'auto', color: '#334155',
         whiteSpace: 'pre-wrap', wordBreak: 'break-all', margin: 0,
+        fontFamily: 'monospace',
     },
     toast: {
-        position: 'fixed', bottom: '2rem', right: '2rem',
-        padding: '1rem 1.5rem', borderLeft: '4px solid #e63946',
-        zIndex: 100, fontWeight: '600', maxWidth: '350px',
+        position: 'fixed', bottom: '1.5rem', right: '1.5rem',
+        padding: '12px 20px', borderLeft: '4px solid #1a6137',
+        zIndex: 100, fontWeight: '600', maxWidth: '350px', fontSize: '0.9rem',
     },
-    inlineEdit: { display: 'flex', gap: '0.25rem', alignItems: 'center' },
+    inlineEdit: { display: 'flex', gap: '4px', alignItems: 'center' },
     inlineInput: {
-        width: '60px', padding: '4px 6px', borderRadius: '6px',
-        border: '1.5px solid #e2e8f0', fontSize: '0.85rem', outline: 'none',
+        width: '60px', padding: '4px 6px', borderRadius: '4px',
+        border: '1.5px solid #dce0e5', fontSize: '0.85rem', outline: 'none',
     },
-    confirmBtn: { background: 'none', cursor: 'pointer', fontSize: '1rem', padding: '2px' },
-    cancelBtn: { background: 'none', cursor: 'pointer', fontSize: '1rem', padding: '2px' },
 };
 
 export default AdminPage;

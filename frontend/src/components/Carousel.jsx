@@ -7,8 +7,8 @@ const Carousel = ({ items, onOrder }) => {
     const prev = () => setActiveIndex((prev) => (prev - 1 + items.length) % items.length);
 
     if (!Array.isArray(items) || items.length === 0) return (
-        <div className="glass-card" style={styles.empty}>
-            <p>Loading tasty meals...</p>
+        <div className="card" style={styles.empty}>
+            <p>Loading menu items...</p>
         </div>
     );
 
@@ -24,18 +24,19 @@ const Carousel = ({ items, onOrder }) => {
                     return (
                         <div
                             key={item.id}
-                            className="glass-card"
+                            className="card"
                             style={{
                                 ...styles.card,
                                 ...styles[position]
                             }}
                         >
-                            <div style={styles.imagePlaceholder}>
-                                <span style={{ fontSize: '4rem' }}>🍔</span>
+                            <div style={styles.iconCircle}>
+                                <span style={{ fontSize: '2.5rem' }}>🍽️</span>
                             </div>
                             <h3 style={styles.mealName}>{item.name}</h3>
                             <p style={styles.price}>৳{item.price}</p>
                             <div style={styles.stock}>
+                                <span style={styles.stockDot}></span>
                                 {item.quantity} available
                             </div>
                             <button
@@ -52,19 +53,22 @@ const Carousel = ({ items, onOrder }) => {
             </div>
 
             <div style={styles.controls}>
-                <button onClick={prev} style={styles.controlBtn}>←</button>
+                <button onClick={prev} style={styles.controlBtn}>‹</button>
                 <div style={styles.dots}>
                     {items.map((_, i) => (
                         <div
                             key={i}
+                            onClick={() => setActiveIndex(i)}
                             style={{
                                 ...styles.dot,
-                                background: i === activeIndex ? '#e63946' : '#cbd5e1'
+                                background: i === activeIndex ? '#1a6137' : '#d1d5db',
+                                width: i === activeIndex ? '20px' : '8px',
+                                borderRadius: i === activeIndex ? '4px' : '50%',
                             }}
                         ></div>
                     ))}
                 </div>
-                <button onClick={next} style={styles.controlBtn}>→</button>
+                <button onClick={next} style={styles.controlBtn}>›</button>
             </div>
         </div>
     );
@@ -73,27 +77,27 @@ const Carousel = ({ items, onOrder }) => {
 const styles = {
     container: {
         position: 'relative',
-        height: '500px',
+        height: '480px',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '2rem 0',
+        padding: '1.5rem 0',
     },
     track: {
         position: 'relative',
         width: '100%',
-        height: '400px',
+        height: '380px',
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
     },
     card: {
         position: 'absolute',
-        width: '300px',
+        width: '280px',
         padding: '2rem',
         textAlign: 'center',
-        transition: 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
+        transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
         opacity: 0,
         pointerEvents: 'none',
     },
@@ -104,13 +108,13 @@ const styles = {
         pointerEvents: 'auto',
     },
     prev: {
-        opacity: 0.4,
-        transform: 'translateX(-100%) scale(0.8)',
+        opacity: 0.35,
+        transform: 'translateX(-105%) scale(0.85)',
         zIndex: 1,
     },
     next: {
-        opacity: 0.4,
-        transform: 'translateX(100%) scale(0.8)',
+        opacity: 0.35,
+        transform: 'translateX(105%) scale(0.85)',
         zIndex: 1,
     },
     hidden: {
@@ -119,31 +123,44 @@ const styles = {
         zIndex: 0,
         pointerEvents: 'none',
     },
-    imagePlaceholder: {
-        width: '120px',
-        height: '120px',
-        background: '#fee2e2',
+    iconCircle: {
+        width: '90px',
+        height: '90px',
+        background: '#f0fdf4',
+        border: '2px solid #bbf7d0',
         borderRadius: '50%',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        margin: '0 auto 1.5rem',
+        margin: '0 auto 1.25rem',
     },
     mealName: {
-        fontSize: '1.5rem',
-        color: '#1d3557',
-        marginBottom: '0.5rem',
+        fontSize: '1.3rem',
+        color: '#1a1a2e',
+        marginBottom: '0.4rem',
+        fontWeight: '700',
     },
     price: {
-        fontSize: '1.25rem',
-        color: '#e63946',
+        fontSize: '1.15rem',
+        color: '#1a6137',
         fontWeight: '700',
-        marginBottom: '1rem',
+        marginBottom: '0.75rem',
     },
     stock: {
-        fontSize: '0.9rem',
-        color: '#64748b',
-        marginBottom: '1.5rem',
+        fontSize: '0.82rem',
+        color: '#5a6474',
+        marginBottom: '1.25rem',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '6px',
+    },
+    stockDot: {
+        width: '6px',
+        height: '6px',
+        borderRadius: '50%',
+        background: '#16a34a',
+        display: 'inline-block',
     },
     orderBtn: {
         width: '100%',
@@ -151,36 +168,37 @@ const styles = {
     controls: {
         display: 'flex',
         alignItems: 'center',
-        gap: '2rem',
-        marginTop: '2rem',
+        gap: '1.5rem',
+        marginTop: '1.5rem',
     },
     controlBtn: {
         background: 'white',
-        width: '48px',
-        height: '48px',
-        borderRadius: '50%',
-        boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+        width: '40px',
+        height: '40px',
+        borderRadius: '8px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        fontSize: '1.25rem',
-        color: '#1d3557',
-        border: '1px solid #e2e8f0',
+        fontSize: '1.5rem',
+        color: '#1a1a2e',
+        border: '1.5px solid #dce0e5',
+        cursor: 'pointer',
+        fontWeight: '300',
     },
     dots: {
         display: 'flex',
-        gap: '8px',
+        gap: '6px',
+        alignItems: 'center',
     },
     dot: {
-        width: '8px',
         height: '8px',
-        borderRadius: '50%',
         transition: 'all 0.3s',
+        cursor: 'pointer',
     },
     empty: {
         padding: '4rem',
         textAlign: 'center',
-        color: '#64748b',
+        color: '#5a6474',
     }
 };
 

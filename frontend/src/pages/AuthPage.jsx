@@ -5,32 +5,65 @@ const AuthPage = ({ onLogin }) => {
     const [isLogin, setIsLogin] = useState(true);
     const [studentId, setStudentId] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
+    const [success, setSuccess] = useState('');
+    const [loading, setLoading] = useState(false);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
+        setSuccess('');
+        setLoading(true);
+
         const endpoint = isLogin ? '/login/' : '/register/';
 
         try {
-            const res = await api.post('identity', endpoint, {
+            const data = await api.post('identity', endpoint, {
                 student_id: studentId,
-                password: password
+                password: password,
             });
 
-            const data = res.data || res;
-
-            if (data.access_token) {
-                onLogin(data);
-            } else if (data.success && !isLogin) {
-                setIsLogin(true);
-                setError('Account created! Please login.');
+            if (isLogin) {
+                // Login: backend returns { access_token, refresh_token, student_id, is_admin }
+                if (data.access_token) {
+                    onLogin(data);
+                } else {
+                    setError('Unexpected response from server.');
+                }
             } else {
-                setError(data.error || res.error || 'Something went wrong');
+                // Register: backend returns { message: "Student X registered successfully" }
+                if (data.message) {
+                    setSuccess('Account created! Please login.');
+                    setIsLogin(true);
+                    setPassword('');
+                } else {
+                    setError('Unexpected response from server.');
+                }
             }
         } catch (err) {
-            setError('Connection failed. Is the backend running?');
+            if (err.status === 429) {
+                setError('Too many attempts. Please wait 1 minute and try again.');
+            } else if (err.status === 401) {
+                setError('Invalid Student ID or password.');
+            } else if (err.status === 400) {
+                setError(err.message || 'Bad request. Check your inputs.');
+            } else if (err.message) {
+                setError(err.message);
+            } else {
+                setError('Connection failed. Is the backend running?');
+            }
+        } finally {
+            setLoading(false);
         }
+    };
+
+    const switchMode = () => {
+        setIsLogin(!isLogin);
+        setError('');
+        setSuccess('');
+        setPassword('');
+        setShowPassword(false);
     };
 
     return (
@@ -53,34 +86,50 @@ const AuthPage = ({ onLogin }) => {
                             placeholder="e.g. 210041001"
                             style={styles.input}
                             required
+                            disabled={loading}
                         />
                     </div>
+
                     <div style={styles.inputGroup}>
                         <label style={styles.label}>Password</label>
-                        <input
-                            type="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            placeholder="••••••••"
-                            style={styles.input}
-                            required
-                        />
+                        <div style={styles.passwordWrapper}>
+                            <input
+                                type={showPassword ? 'text' : 'password'}
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                placeholder="••••••••"
+                                style={{ ...styles.input, paddingRight: '48px' }}
+                                required
+                                disabled={loading}
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                style={styles.eyeBtn}
+                                title={showPassword ? 'Hide password' : 'Show password'}
+                            >
+                                {showPassword ? '🙈' : '👁️'}
+                            </button>
+                        </div>
                     </div>
 
-                    {error && <p style={styles.error}>{error}</p>}
+                    {error && <p style={styles.error}>⚠️ {error}</p>}
+                    {success && <p style={styles.successMsg}>✅ {success}</p>}
 
-                    <button type="submit" className="btn-primary" style={styles.submitBtn}>
-                        {isLogin ? 'Login' : 'Register'}
+                    <button
+                        type="submit"
+                        className="btn-primary"
+                        style={{ ...styles.submitBtn, opacity: loading ? 0.7 : 1 }}
+                        disabled={loading}
+                    >
+                        {loading ? 'Please wait...' : isLogin ? 'Login' : 'Register'}
                     </button>
                 </form>
 
                 <div style={styles.toggle}>
                     <p>
-                        {isLogin ? "Don't have an account? " : "Already have an account? "}
-                        <span
-                            onClick={() => setIsLogin(!isLogin)}
-                            style={styles.toggleLink}
-                        >
+                        {isLogin ? "Don't have an account? " : 'Already have an account? '}
+                        <span onClick={switchMode} style={styles.toggleLink}>
                             {isLogin ? 'Register now' : 'Login instead'}
                         </span>
                     </p>
@@ -141,16 +190,48 @@ const styles = {
         fontSize: '1rem',
         outline: 'none',
         transition: 'border-color 0.2s',
+        boxSizing: 'border-box',
+        background: 'white',
+    },
+    passwordWrapper: {
+        position: 'relative',
+        display: 'flex',
+        alignItems: 'center',
+    },
+    eyeBtn: {
+        position: 'absolute',
+        right: '12px',
+        background: 'none',
+        border: 'none',
+        cursor: 'pointer',
+        fontSize: '1.1rem',
+        padding: '4px',
+        lineHeight: 1,
     },
     submitBtn: {
-        marginTop: '1rem',
+        marginTop: '0.5rem',
         width: '100%',
         fontSize: '1.1rem',
     },
     error: {
         color: '#ef4444',
         fontSize: '0.9rem',
+        textAlign: 'left',
         marginTop: '-0.5rem',
+        background: '#fef2f2',
+        padding: '8px 12px',
+        borderRadius: '8px',
+        border: '1px solid #fecaca',
+    },
+    successMsg: {
+        color: '#16a34a',
+        fontSize: '0.9rem',
+        textAlign: 'left',
+        marginTop: '-0.5rem',
+        background: '#f0fdf4',
+        padding: '8px 12px',
+        borderRadius: '8px',
+        border: '1px solid #bbf7d0',
     },
     toggle: {
         marginTop: '2rem',
@@ -169,7 +250,7 @@ const styles = {
         borderRadius: '50%',
         filter: 'blur(80px)',
         zIndex: 1,
-    }
+    },
 };
 
 export default AuthPage;

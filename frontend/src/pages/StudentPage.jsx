@@ -137,7 +137,7 @@ const styles = {
     main: {
         display: 'grid',
         gridTemplateColumns: '1fr 350px',
-        gap: '3rem',
+        gap: '5rem',
     },
     menuSection: {
         minWidth: 0,

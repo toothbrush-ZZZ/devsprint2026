@@ -16,8 +16,9 @@ const Carousel = ({ items, onOrder }) => {
         <div style={styles.container}>
             <div style={styles.track}>
                 {items.map((item, index) => {
-                    let position = 'next';
+                    let position = 'hidden';
                     if (index === activeIndex) position = 'active';
+                    else if (index === (activeIndex + 1) % items.length) position = 'next';
                     else if (index === (activeIndex - 1 + items.length) % items.length) position = 'prev';
 
                     return (
@@ -104,13 +105,19 @@ const styles = {
     },
     prev: {
         opacity: 0.4,
-        transform: 'translateX(-120%) scale(0.8)',
+        transform: 'translateX(-100%) scale(0.8)',
         zIndex: 1,
     },
     next: {
         opacity: 0.4,
-        transform: 'translateX(120%) scale(0.8)',
+        transform: 'translateX(100%) scale(0.8)',
         zIndex: 1,
+    },
+    hidden: {
+        opacity: 0,
+        transform: 'translateX(0) scale(0.5)',
+        zIndex: 0,
+        pointerEvents: 'none',
     },
     imagePlaceholder: {
         width: '120px',

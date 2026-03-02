@@ -15,6 +15,7 @@ const StudentPage = ({ user, onLogout }) => {
     const [cpMsg, setCpMsg] = useState('');
     const [showCpOld, setShowCpOld] = useState(false);
     const [showCpNew, setShowCpNew] = useState(false);
+    const [showBilling, setShowBilling] = useState(false);
 
     // Ref to track which order IDs are already in the list — avoids calling
     // fetchSingleOrder inside a state updater (React StrictMode runs those twice)
@@ -210,6 +211,12 @@ const StudentPage = ({ user, onLogout }) => {
                     </div>
                     <div style={styles.headerActions}>
                         <button
+                            style={{ ...styles.headerBtn, background: 'rgba(255,255,255,0.2)', borderColor: 'rgba(252, 211, 77, 0.7)' }}
+                            onClick={() => setShowBilling(true)}
+                        >
+                            View Billing
+                        </button>
+                        <button
                             style={styles.headerBtn}
                             onClick={() => { setShowChangePassword(!showChangePassword); setCpMsg(''); }}
                         >
@@ -289,15 +296,92 @@ const StudentPage = ({ user, onLogout }) => {
                 </main>
             </div>
 
+            {showBilling && (
+                <div style={styles.billingOverlay}>
+                    <div className="card" style={styles.billingPanel}>
+                        <div style={styles.billingHeader}>
+                            <div>
+                                <h3 style={styles.billingTitle}>Billing Summary</h3>
+                                <p style={styles.billingSubtitle}>Dummy preview for your recent cafeteria activity</p>
+                            </div>
+                            <button
+                                type="button"
+                                style={styles.billingClose}
+                                onClick={() => setShowBilling(false)}
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        <div style={styles.billingBody}>
+                            <div style={styles.billingRow}>
+                                <span style={styles.billingLabel}>Student ID</span>
+                                <span style={styles.billingValue}>{user.student_id}</span>
+                            </div>
+                            <div style={styles.billingRow}>
+                                <span style={styles.billingLabel}>Current Month</span>
+                                <span style={styles.billingValue}>March 2026</span>
+                            </div>
+                            <div style={{ ...styles.billingRow, marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px dashed #e2e8f0' }}>
+                                <span style={styles.billingLabel}>Sample Meals</span>
+                                <span style={styles.billingValueMuted}>Illustrative only</span>
+                            </div>
+
+                            <div style={styles.billingItems}>
+                                <div style={styles.billingItem}>
+                                    <div>
+                                        <div style={styles.billingItemName}>Cafeteria Lunch Combo</div>
+                                        <div style={styles.billingItemMeta}>x3 · ৳120 each</div>
+                                    </div>
+                                    <div style={styles.billingItemAmount}>৳360</div>
+                                </div>
+                                <div style={styles.billingItem}>
+                                    <div>
+                                        <div style={styles.billingItemName}>Evening Snacks</div>
+                                        <div style={styles.billingItemMeta}>x5 · ৳60 each</div>
+                                    </div>
+                                    <div style={styles.billingItemAmount}>৳300</div>
+                                </div>
+                                <div style={styles.billingItem}>
+                                    <div>
+                                        <div style={styles.billingItemName}>Special Day Menu</div>
+                                        <div style={styles.billingItemMeta}>x1 · ৳180</div>
+                                    </div>
+                                    <div style={styles.billingItemAmount}>৳180</div>
+                                </div>
+                            </div>
+
+                            <div style={{ ...styles.billingRow, marginTop: '0.75rem' }}>
+                                <span style={styles.billingLabel}>Subtotal</span>
+                                <span style={styles.billingValue}>৳840</span>
+                            </div>
+                            <div style={styles.billingRow}>
+                                <span style={styles.billingLabel}>EST. VAT (5%)</span>
+                                <span style={styles.billingValue}>৳42</span>
+                            </div>
+                            <div style={{ ...styles.billingRow, marginTop: '0.5rem' }}>
+                                <span style={styles.billingTotalLabel}>Estimated Total</span>
+                                <span style={styles.billingTotalValue}>৳882</span>
+                            </div>
+
+                            <p style={styles.billingNote}>
+                                This is a <strong>dummy billing window</strong> for UI only. Actual payment and history will
+                                be handled by the backend in a real deployment.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {notification && (
-                <div className="card" style={styles.notification}>{notification}</div>
+                <div className="card toast-like" style={styles.notification}>{notification}</div>
             )}
         </div>
     );
 };
 
 const styles = {
-    page: { minHeight: '100vh', background: '#f5f6f8' },
+    page: { minHeight: '100vh', background: 'transparent' },
     header: {
         background: '#1a6137',
         borderBottom: '3px solid #0e4528',
@@ -305,10 +389,11 @@ const styles = {
     headerInner: {
         maxWidth: '1200px',
         margin: '0 auto',
-        padding: '14px 2rem',
+        padding: '10px 1.5rem',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
+        gap: '1rem',
     },
     headerLeft: {
         display: 'flex',
@@ -367,31 +452,144 @@ const styles = {
     content: {
         maxWidth: '1200px',
         margin: '0 auto',
-        padding: '1.5rem 2rem',
+        padding: '1.25rem 1.5rem',
     },
-    cpPanel: { padding: '1.25rem 1.5rem', marginBottom: '1.5rem', maxWidth: '480px' },
-    cpTitle: { marginBottom: '0.75rem', color: '#1a1a2e', fontSize: '0.95rem', fontWeight: '600' },
+    cpPanel: { padding: '1.1rem 1.3rem', marginBottom: '1.25rem', maxWidth: '460px' },
+    cpTitle: { marginBottom: '0.75rem', color: '#e5e7eb', fontSize: '0.95rem', fontWeight: '600' },
     pwRow: { position: 'relative', display: 'flex', alignItems: 'center' },
     cpInput: { width: '100%', padding: '9px 40px 9px 12px', borderRadius: '6px', border: '1.5px solid #dce0e5', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', background: '#fafbfc' },
     eyeInline: { position: 'absolute', right: '10px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1rem' },
-    main: { display: 'grid', gridTemplateColumns: '1fr 350px', gap: '3rem', marginTop: '0.5rem' },
+    main: { display: 'grid', gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 0.9fr)', gap: '2.25rem', marginTop: '0.25rem', alignItems: 'flex-start' },
     menuSection: { minWidth: 0 },
-    orderSection: {},
-    sectionTitle: { marginBottom: '1.25rem', fontSize: '1.25rem', fontWeight: '700', color: '#1a1a2e' },
+    orderSection: { marginTop: '0.5rem' },
+    sectionTitle: { marginBottom: '1.25rem', fontSize: '1.25rem', fontWeight: '700', color: '#f9fafb' },
     orderErrorBanner: { background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', padding: '10px 14px', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.85rem' },
     orderList: { display: 'flex', flexDirection: 'column', gap: '0.75rem' },
-    orderCard: { padding: '1rem 1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-    emptyCard: { padding: '2rem', textAlign: 'center' },
+    orderCard: { padding: '0.9rem 1.1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+    emptyCard: { padding: '1.5rem', textAlign: 'center' },
     orderInfo: { display: 'flex', flexDirection: 'column' },
     itemName: { fontWeight: '600', fontSize: '0.95rem' },
     statusBadge: { padding: '4px 12px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: '700', whiteSpace: 'nowrap', letterSpacing: '0.03em' },
     notification: {
         position: 'fixed', bottom: '1.5rem', right: '1.5rem',
-        padding: '12px 20px', borderLeft: '4px solid #1a6137',
-        zIndex: 100, fontWeight: '600', fontSize: '0.9rem',
+        padding: '12px 20px',
+        borderLeft: '4px solid #1a6137',
+        zIndex: 100,
+        fontWeight: '600',
+        fontSize: '0.9rem',
         maxWidth: '360px',
     },
-    empty: { color: '#5a6474', fontStyle: 'italic', fontSize: '0.9rem' },
+    empty: { color: '#9ca3af', fontStyle: 'italic', fontSize: '0.9rem' },
+    billingOverlay: {
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(15,23,42,0.32)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'flex-end',
+        zIndex: 90,
+        padding: '1.5rem',
+    },
+    billingPanel: {
+        width: '360px',
+        maxWidth: '90vw',
+        padding: '1.5rem 1.75rem',
+        boxShadow: '0 20px 60px rgba(15,23,42,0.4)',
+    },
+    billingHeader: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+        marginBottom: '1rem',
+    },
+    billingTitle: {
+        fontSize: '1.05rem',
+        fontWeight: 700,
+        color: '#f9fafb',
+        margin: 0,
+    },
+    billingSubtitle: {
+        fontSize: '0.8rem',
+        color: '#9ca3af',
+        marginTop: '2px',
+    },
+    billingClose: {
+        borderRadius: '999px',
+        width: '28px',
+        height: '28px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: '0.9rem',
+        background: '#f8fafc',
+        border: '1px solid #e2e8f0',
+    },
+    billingBody: {
+        marginTop: '0.5rem',
+        fontSize: '0.85rem',
+    },
+    billingRow: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        gap: '0.5rem',
+        marginBottom: '0.35rem',
+    },
+    billingLabel: {
+        color: '#9ca3af',
+    },
+    billingValue: {
+        fontWeight: 600,
+        color: '#f9fafb',
+    },
+    billingValueMuted: {
+        fontSize: '0.78rem',
+        color: '#94a3b8',
+        fontStyle: 'italic',
+    },
+    billingItems: {
+        marginTop: '0.5rem',
+        marginBottom: '0.5rem',
+        borderRadius: '10px',
+        background: 'linear-gradient(135deg, rgba(22,163,74,0.06), rgba(59,130,246,0.04))',
+        padding: '0.75rem 0.85rem',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '0.35rem',
+    },
+    billingItem: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    billingItemName: {
+        fontWeight: 600,
+        color: '#f9fafb',
+        fontSize: '0.86rem',
+    },
+    billingItemMeta: {
+        fontSize: '0.78rem',
+        color: '#9ca3af',
+    },
+    billingItemAmount: {
+        fontWeight: 600,
+        color: '#f9fafb',
+    },
+    billingTotalLabel: {
+        fontWeight: 700,
+        color: '#f9fafb',
+    },
+    billingTotalValue: {
+        fontWeight: 800,
+        color: '#15803d',
+        fontSize: '1rem',
+    },
+    billingNote: {
+        marginTop: '0.75rem',
+        fontSize: '0.78rem',
+        color: '#64748b',
+        lineHeight: 1.4,
+    },
 };
 
 export default StudentPage;

@@ -316,7 +316,12 @@ const AdminPage = ({ user, onLogout }) => {
                                                     <td style={styles.td}>৳{item.price}</td>
                                                     <td style={styles.td}>{item.quantity}</td>
                                                     <td style={styles.td}>
-                                                        <span style={{ ...styles.badge, background: item.available ? '#f0fdf4' : '#fef2f2', color: item.available ? '#166534' : '#991b1b', border: `1px solid ${item.available ? '#bbf7d0' : '#fecaca'}` }}>
+                                                        <span style={{
+                                                            ...styles.badge,
+                                                            background: item.available ? 'rgba(34,197,94,0.22)' : 'rgba(248,113,113,0.22)',
+                                                            color: item.available ? '#bbf7d0' : '#fecaca',
+                                                            border: `1px solid ${item.available ? 'rgba(34,197,94,0.6)' : 'rgba(248,113,113,0.65)'}`
+                                                        }}>
                                                             {item.available ? 'Active' : 'Paused'}
                                                         </span>
                                                     </td>
@@ -366,11 +371,11 @@ const AdminPage = ({ user, onLogout }) => {
                                 {activeKitchenOrders.map(order => (
                                     <div key={order.order_id} className="card" style={styles.orderCard}>
                                         <div style={styles.orderCardHeader}>
-                                            <span style={{ fontWeight: '700', color: '#1a6137' }}>#{order.order_id}</span>
-                                            <span style={{ color: '#5a6474', fontSize: '0.8rem' }}>{order.student_id}</span>
+                                            <span style={{ fontWeight: '700', color: '#bbf7d0' }}>#{order.order_id}</span>
+                                            <span style={{ color: '#9ca3af', fontSize: '0.8rem' }}>{order.student_id}</span>
                                         </div>
                                         <h4 style={{ fontSize: '1.05rem', margin: '0.5rem 0' }}>{order.item_name || 'Meal'}</h4>
-                                        <span style={{ ...styles.badge, background: '#fffbeb', color: '#92400e', border: '1px solid #fde68a', fontSize: '0.72rem', marginBottom: '1rem', display: 'inline-block' }}>
+                                        <span style={{ ...styles.badge, background: 'rgba(251,191,36,0.16)', color: '#fde68a', border: '1px solid rgba(251,191,36,0.7)', fontSize: '0.72rem', marginBottom: '1rem', display: 'inline-block' }}>
                                             {(order.status || '').replace('_', ' ').toUpperCase()}
                                         </span>
                                         <div style={{ display: 'flex', gap: '0.5rem', flexDirection: 'column' }}>
@@ -402,8 +407,8 @@ const AdminPage = ({ user, onLogout }) => {
                                         <div key={svc.key} className="card" style={styles.serviceCard}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
                                                 <div>
-                                                    <h4 style={{ fontSize: '0.95rem', color: '#1a1a2e', fontWeight: '600' }}>{svc.label}</h4>
-                                                    <p style={{ fontSize: '0.78rem', color: '#94a3b8' }}>Port {svc.port}</p>
+                                                    <h4 style={{ fontSize: '0.95rem', color: '#e5e7eb', fontWeight: '600' }}>{svc.label}</h4>
+                                                    <p style={{ fontSize: '0.78rem', color: '#9ca3af' }}>Port {svc.port}</p>
                                                 </div>
                                                 <span style={{
                                                     padding: '3px 10px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: '700',
@@ -451,7 +456,7 @@ const AdminPage = ({ user, onLogout }) => {
                                     return (
                                         <div key={svc.key} className="card" style={styles.serviceCard}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                                                <h4 style={{ fontSize: '0.95rem', color: '#1a1a2e', fontWeight: '600' }}>{svc.label}</h4>
+                                                <h4 style={{ fontSize: '0.95rem', color: '#e5e7eb', fontWeight: '600' }}>{svc.label}</h4>
                                                 <span style={{
                                                     padding: '3px 10px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: '700',
                                                     background: !h ? '#f3f4f6' : h.ok ? '#f0fdf4' : '#fef2f2',
@@ -485,11 +490,11 @@ const AdminPage = ({ user, onLogout }) => {
                                     const m = metricsData[svc.key];
                                     return (
                                         <div key={svc.key} className="card" style={styles.serviceCard}>
-                                            <h4 style={{ fontSize: '0.95rem', color: '#1a1a2e', marginBottom: '0.75rem', fontWeight: '600' }}>{svc.label}</h4>
+                                            <h4 style={{ fontSize: '0.95rem', color: '#e5e7eb', marginBottom: '0.75rem', fontWeight: '600' }}>{svc.label}</h4>
                                             {m ? (
                                                 <pre style={styles.jsonPre}>{JSON.stringify(m, null, 2)}</pre>
                                             ) : (
-                                                <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>
+                                                <p style={{ color: '#9ca3af', fontSize: '0.85rem' }}>
                                                     {metricsLoading ? 'Loading...' : '— Unavailable —'}
                                                 </p>
                                             )}
@@ -507,8 +512,8 @@ const AdminPage = ({ user, onLogout }) => {
 
                             {/* Reset any student's password */}
                             <div className="card" style={{ padding: '1.75rem' }}>
-                                <h4 style={{ color: '#1a1a2e', marginBottom: '0.5rem', fontWeight: '600' }}>Reset Student Password</h4>
-                                <p style={{ color: '#5a6474', fontSize: '0.85rem', marginBottom: '1.25rem' }}>
+                                <h4 style={{ color: '#e5e7eb', marginBottom: '0.5rem', fontWeight: '600' }}>Reset Student Password</h4>
+                                <p style={{ color: '#9ca3af', fontSize: '0.85rem', marginBottom: '1.25rem' }}>
                                     Reset any student's password without needing their old password.
                                 </p>
                                 <form onSubmit={handleAdminResetPassword} style={styles.form}>
@@ -565,7 +570,7 @@ const AdminPage = ({ user, onLogout }) => {
 };
 
 const styles = {
-    page: { minHeight: '100vh', background: '#f5f6f8' },
+    page: { minHeight: '100vh', background: 'transparent' },
     header: {
         background: '#1a6137',
         borderBottom: '3px solid #0e4528',
@@ -573,10 +578,11 @@ const styles = {
     headerInner: {
         maxWidth: '1300px',
         margin: '0 auto',
-        padding: '14px 2rem',
+        padding: '10px 1.5rem',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
+        gap: '1rem',
     },
     headerLeft: {
         display: 'flex',
@@ -620,7 +626,7 @@ const styles = {
     contentWrap: {
         maxWidth: '1300px',
         margin: '0 auto',
-        padding: '1.5rem 2rem',
+        padding: '1.25rem 1.5rem',
     },
     tabBar: {
         display: 'flex', gap: '6px', marginBottom: '1.75rem', flexWrap: 'wrap',
@@ -635,26 +641,26 @@ const styles = {
         background: '#1a6137', color: 'white', border: '1.5px solid #1a6137',
     },
     main: {},
-    panelTitle: { fontSize: '1.15rem', color: '#1a1a2e', margin: 0, fontWeight: '700' },
-    inventoryGrid: { display: 'grid', gridTemplateColumns: '300px 1fr', gap: '2rem' },
-    panel: { padding: '1.5rem', height: 'fit-content' },
+    panelTitle: { fontSize: '1.15rem', color: '#f9fafb', margin: 0, fontWeight: '700' },
+    inventoryGrid: { display: 'grid', gridTemplateColumns: '280px 1fr', gap: '1.75rem' },
+    panel: { padding: '1.3rem', height: 'fit-content' },
     form: { display: 'flex', flexDirection: 'column', gap: '0.85rem', marginTop: '1rem' },
     input: {
         padding: '9px 12px', borderRadius: '6px', border: '1.5px solid #dce0e5',
         fontSize: '0.9rem', outline: 'none', width: '100%', boxSizing: 'border-box',
         background: '#fafbfc',
     },
-    tableWrapper: { marginTop: '1rem', overflowX: 'auto', borderRadius: '8px', border: '1px solid #e0e4e8' },
-    table: { width: '100%', borderCollapse: 'collapse', textAlign: 'left' },
-    th: { padding: '10px 16px', color: '#5a6474', fontWeight: '600', fontSize: '0.82rem', borderBottom: '1px solid #e0e4e8', background: '#f8f9fb', textTransform: 'uppercase', letterSpacing: '0.04em' },
-    tr: { borderBottom: '1px solid #eceef1' },
-    td: { padding: '10px 16px', fontSize: '0.9rem' },
-    badge: { padding: '3px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '600' },
+    tableWrapper: { marginTop: '1rem', overflowX: 'auto', borderRadius: '8px', border: '1px solid rgba(148,163,184,0.35)' },
+    table: { width: '100%', borderCollapse: 'collapse', textAlign: 'left', color: '#e5e7eb' },
+    th: { padding: '10px 16px', color: '#9ca3af', fontWeight: '600', fontSize: '0.82rem', borderBottom: '1px solid rgba(148,163,184,0.35)', background: 'rgba(15,23,42,0.85)', textTransform: 'uppercase', letterSpacing: '0.04em' },
+    tr: { borderBottom: '1px solid rgba(148,163,184,0.25)' },
+    td: { padding: '10px 16px', fontSize: '0.9rem', color: '#e5e7eb' },
+    badge: { padding: '3px 10px', borderRadius: '999px', fontSize: '0.75rem', fontWeight: '600' },
     actionGroup: { display: 'flex', gap: '4px' },
     actionBtn: {
-        background: '#f5f6f8', fontSize: '0.9rem', padding: '4px 10px', borderRadius: '4px',
-        border: '1px solid #dce0e5', color: '#1a1a2e', cursor: 'pointer', fontWeight: '600',
-        transition: 'background 0.15s',
+        background: 'rgba(15,23,42,0.9)', fontSize: '0.9rem', padding: '4px 10px', borderRadius: '4px',
+        border: '1px solid rgba(148,163,184,0.7)', color: '#e5e7eb', cursor: 'pointer', fontWeight: '600',
+        transition: 'background 0.15s, border-color 0.15s',
     },
     orderGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '1.25rem' },
     orderCard: { padding: '1.25rem' },
@@ -663,8 +669,8 @@ const styles = {
     serviceGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.25rem' },
     serviceCard: { padding: '1.25rem' },
     jsonPre: {
-        background: '#f8f9fb', border: '1px solid #e0e4e8', borderRadius: '6px',
-        padding: '10px', fontSize: '0.75rem', overflowX: 'auto', color: '#334155',
+        background: 'rgba(15,23,42,0.96)', border: '1px solid rgba(148,163,184,0.5)', borderRadius: '6px',
+        padding: '10px', fontSize: '0.75rem', overflowX: 'auto', color: '#e5e7eb',
         whiteSpace: 'pre-wrap', wordBreak: 'break-all', margin: 0,
         fontFamily: 'monospace',
     },

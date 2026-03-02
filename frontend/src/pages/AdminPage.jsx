@@ -572,8 +572,9 @@ const AdminPage = ({ user, onLogout }) => {
 const styles = {
     page: { minHeight: '100vh', background: 'transparent' },
     header: {
-        background: '#1a6137',
-        borderBottom: '3px solid #0e4528',
+        background: 'linear-gradient(90deg, #14532d, #16a34a)',
+        borderBottom: '3px solid #052e16',
+        boxShadow: '0 12px 30px rgba(0,0,0,0.35)',
     },
     headerInner: {
         maxWidth: '1300px',

@@ -93,7 +93,7 @@ const AuthPage = ({ onLogin }) => {
 
                     <form onSubmit={handleSubmit} style={styles.form}>
                         <div style={styles.inputGroup}>
-                            <label style={styles.label}>Student ID</label>
+                            <label style={styles.label}>ID</label>
                             <input
                                 type="text"
                                 value={studentId}

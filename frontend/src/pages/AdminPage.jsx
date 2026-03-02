@@ -371,11 +371,11 @@ const AdminPage = ({ user, onLogout }) => {
                                 {activeKitchenOrders.map(order => (
                                     <div key={order.order_id} className="card" style={styles.orderCard}>
                                         <div style={styles.orderCardHeader}>
-                                            <span style={{ fontWeight: '700', color: '#bbf7d0' }}>#{order.order_id}</span>
-                                            <span style={{ color: '#9ca3af', fontSize: '0.8rem' }}>{order.student_id}</span>
+                                            <span style={{ fontWeight: '700', color: '#1a6137' }}>#{order.order_id}</span>
+                                            <span style={{ color: '#4b5563', fontSize: '0.8rem' }}>{order.student_id}</span>
                                         </div>
-                                        <h4 style={{ fontSize: '1.05rem', margin: '0.5rem 0' }}>{order.item_name || 'Meal'}</h4>
-                                        <span style={{ ...styles.badge, background: 'rgba(251,191,36,0.16)', color: '#fde68a', border: '1px solid rgba(251,191,36,0.7)', fontSize: '0.72rem', marginBottom: '1rem', display: 'inline-block' }}>
+                                        <h4 style={{ fontSize: '1.05rem', margin: '0.5rem 0', color: '#020617' }}>{order.item_name || 'Meal'}</h4>
+                                        <span style={{ ...styles.badge, background: '#fffbeb', color: '#92400e', border: '1px solid #fbbf24', fontSize: '0.72rem', marginBottom: '1rem', display: 'inline-block' }}>
                                             {(order.status || '').replace('_', ' ').toUpperCase()}
                                         </span>
                                         <div style={{ display: 'flex', gap: '0.5rem', flexDirection: 'column' }}>
@@ -407,8 +407,8 @@ const AdminPage = ({ user, onLogout }) => {
                                         <div key={svc.key} className="card" style={styles.serviceCard}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
                                                 <div>
-                                                    <h4 style={{ fontSize: '0.95rem', color: '#e5e7eb', fontWeight: '600' }}>{svc.label}</h4>
-                                                    <p style={{ fontSize: '0.78rem', color: '#9ca3af' }}>Port {svc.port}</p>
+                                                    <h4 style={{ fontSize: '0.95rem', color: '#020617', fontWeight: '600' }}>{svc.label}</h4>
+                                                    <p style={{ fontSize: '0.78rem', color: '#4b5563' }}>Port {svc.port}</p>
                                                 </div>
                                                 <span style={{
                                                     padding: '3px 10px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: '700',
@@ -456,7 +456,7 @@ const AdminPage = ({ user, onLogout }) => {
                                     return (
                                         <div key={svc.key} className="card" style={styles.serviceCard}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                                                <h4 style={{ fontSize: '0.95rem', color: '#e5e7eb', fontWeight: '600' }}>{svc.label}</h4>
+                                                <h4 style={{ fontSize: '0.95rem', color: '#020617', fontWeight: '600' }}>{svc.label}</h4>
                                                 <span style={{
                                                     padding: '3px 10px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: '700',
                                                     background: !h ? '#f3f4f6' : h.ok ? '#f0fdf4' : '#fef2f2',
@@ -490,7 +490,7 @@ const AdminPage = ({ user, onLogout }) => {
                                     const m = metricsData[svc.key];
                                     return (
                                         <div key={svc.key} className="card" style={styles.serviceCard}>
-                                            <h4 style={{ fontSize: '0.95rem', color: '#e5e7eb', marginBottom: '0.75rem', fontWeight: '600' }}>{svc.label}</h4>
+                                            <h4 style={{ fontSize: '0.95rem', color: '#020617', marginBottom: '0.75rem', fontWeight: '600' }}>{svc.label}</h4>
                                             {m ? (
                                                 <pre style={styles.jsonPre}>{JSON.stringify(m, null, 2)}</pre>
                                             ) : (
@@ -511,9 +511,9 @@ const AdminPage = ({ user, onLogout }) => {
                             <h3 style={{ ...styles.panelTitle, marginBottom: '1.5rem' }}>Admin Tools</h3>
 
                             {/* Reset any student's password */}
-                            <div className="card" style={{ padding: '1.75rem' }}>
-                                <h4 style={{ color: '#e5e7eb', marginBottom: '0.5rem', fontWeight: '600' }}>Reset Student Password</h4>
-                                <p style={{ color: '#9ca3af', fontSize: '0.85rem', marginBottom: '1.25rem' }}>
+                            <div className="card" style={{ padding: '1.75rem', background: '#ffffff', border: '1px solid #e5e7eb', boxShadow: '0 18px 40px rgba(15,23,42,0.16)', color: '#020617' }}>
+                                <h4 style={{ color: '#020617', marginBottom: '0.5rem', fontWeight: '600' }}>Reset Student Password</h4>
+                                <p style={{ color: '#4b5563', fontSize: '0.85rem', marginBottom: '1.25rem' }}>
                                     Reset any student's password without needing their old password.
                                 </p>
                                 <form onSubmit={handleAdminResetPassword} style={styles.form}>
@@ -641,9 +641,15 @@ const styles = {
         background: '#1a6137', color: 'white', border: '1.5px solid #1a6137',
     },
     main: {},
-    panelTitle: { fontSize: '1.15rem', color: '#f9fafb', margin: 0, fontWeight: '700' },
+    panelTitle: { fontSize: '1.15rem', color: '#020617', margin: 0, fontWeight: '700' },
     inventoryGrid: { display: 'grid', gridTemplateColumns: '280px 1fr', gap: '1.75rem' },
-    panel: { padding: '1.3rem', height: 'fit-content' },
+    panel: {
+        padding: '1.3rem',
+        height: 'fit-content',
+        background: '#ffffff',
+        border: '1px solid #e5e7eb',
+        boxShadow: '0 18px 40px rgba(15,23,42,0.16)',
+    },
     form: { display: 'flex', flexDirection: 'column', gap: '0.85rem', marginTop: '1rem' },
     input: {
         padding: '9px 12px', borderRadius: '6px', border: '1.5px solid #dce0e5',
@@ -663,11 +669,23 @@ const styles = {
         transition: 'background 0.15s, border-color 0.15s',
     },
     orderGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '1.25rem' },
-    orderCard: { padding: '1.25rem' },
+    orderCard: {
+        padding: '1.25rem',
+        background: '#ffffff',
+        border: '1px solid #e5e7eb',
+        boxShadow: '0 18px 40px rgba(15,23,42,0.16)',
+        color: '#020617',
+    },
     orderCardHeader: { display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' },
     fullBtn: { width: '100%' },
     serviceGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.25rem' },
-    serviceCard: { padding: '1.25rem' },
+    serviceCard: {
+        padding: '1.25rem',
+        background: '#ffffff',
+        border: '1px solid #e5e7eb',
+        boxShadow: '0 18px 40px rgba(15,23,42,0.16)',
+        color: '#020617',
+    },
     jsonPre: {
         background: 'rgba(15,23,42,0.96)', border: '1px solid rgba(148,163,184,0.5)', borderRadius: '6px',
         padding: '10px', fontSize: '0.75rem', overflowX: 'auto', color: '#e5e7eb',

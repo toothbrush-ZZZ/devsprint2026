@@ -36,7 +36,7 @@ const Carousel = ({ items, onOrder }) => {
                             <h3 style={styles.mealName}>{item.name}</h3>
                             <p style={styles.price}>৳{item.price}</p>
                             <div style={styles.stock}>
-                                <span style={styles.stockDot}></span>
+                                <span style={{ ...styles.stockDot }} className="availability-dot"></span>
                                 {item.quantity} available
                             </div>
                             <button
@@ -106,6 +106,7 @@ const styles = {
         transform: 'translateX(0) scale(1)',
         zIndex: 5,
         pointerEvents: 'auto',
+        animation: 'subtleFloat 4s ease-in-out infinite',
     },
     prev: {
         opacity: 0.35,

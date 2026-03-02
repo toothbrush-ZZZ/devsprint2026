@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from 'react';
-import Carousel from '../components/Carousel';
 import { api } from '../utils/api';
 
 const LS_KEY = (studentId) => `active_order_${studentId}`;
@@ -264,7 +263,49 @@ const StudentPage = ({ user, onLogout }) => {
                     <section style={styles.menuSection}>
                         <h2 style={styles.sectionTitle}>Today's Menu</h2>
                         {orderError && <div style={styles.orderErrorBanner}>{orderError}</div>}
-                        <Carousel items={items} onOrder={handleOrder} />
+
+                        <div style={styles.menuGrid}>
+                            {items.map((item) => {
+                                const soldOut = !item.available || item.quantity <= 0;
+                                return (
+                                    <div key={item.id} className="card" style={styles.menuCard}>
+                                        <div style={styles.menuHeader}>
+                                            <div style={styles.menuIconCircle}>🍽️</div>
+                                            <h3 style={styles.menuName}>{item.name}</h3>
+                                            <p style={styles.menuPrice}>৳{item.price}</p>
+                                        </div>
+                                        <div style={styles.menuMeta}>
+                                            <span style={styles.menuStock}>
+                                                <span
+                                                    style={{
+                                                        ...styles.menuStockDot,
+                                                        background: soldOut ? '#ef4444' : '#16a34a',
+                                                    }}
+                                                    className="availability-dot"
+                                                />
+                                                {item.quantity} available
+                                            </span>
+                                        </div>
+                                        <button
+                                            className="btn-primary"
+                                            style={{
+                                                ...styles.menuOrderBtn,
+                                                ...(soldOut ? styles.menuOrderBtnSold : {}),
+                                            }}
+                                            onClick={() => handleOrder(item.id)}
+                                            disabled={soldOut}
+                                        >
+                                            {soldOut ? 'Sold Out' : 'Order Now'}
+                                        </button>
+                                    </div>
+                                );
+                            })}
+                            {items.length === 0 && (
+                                <div className="card" style={styles.emptyMenuCard}>
+                                    <p style={styles.empty}>Menu will appear here once items are available.</p>
+                                </div>
+                            )}
+                        </div>
                     </section>
 
                     <section style={styles.orderSection}>
@@ -272,24 +313,53 @@ const StudentPage = ({ user, onLogout }) => {
                         <div style={styles.orderList}>
                             {validOrders.length === 0 ? (
                                 <div className="card" style={styles.emptyCard}>
-                                    <p style={styles.empty}>No active orders. Place one from the menu!</p>
+                                    <p style={styles.emptyTitle}>No active orders</p>
+                                    <p style={styles.emptySub}>Pick a meal from the menu to see your order timeline here.</p>
+                                    <div style={styles.timelineSkeleton}>
+                                        <div style={styles.timelineBar} />
+                                    </div>
                                 </div>
                             ) : (
-                                validOrders.map(order => (
-                                    <div key={order.order_id} className="card" style={styles.orderCard}>
-                                        <div style={styles.orderInfo}>
-                                            <span style={styles.itemName}>{order.item_name || 'Meal'}</span>
+                                (() => {
+                                    const order = validOrders[0]; // show most recent/first order
+                                    const status = (order.status || 'pending').toLowerCase();
+                                    const step =
+                                        status === 'ready' ? 2 :
+                                        (status === 'in_kitchen' || status === 'stock_verified') ? 1 : 0;
+                                    const activeWidth = ['0%', '50%', '100%'][step];
+                                    const steps = ['Placed', 'In kitchen', 'Ready'];
+                                    return (
+                                        <div className="card" style={styles.orderCard}>
+                                            <div style={styles.orderInfo}>
+                                                <span style={styles.itemName}>{order.item_name || 'Meal'}</span>
+                                            </div>
+                                            <div style={styles.timeline}>
+                                                <div style={styles.timelineTrack} />
+                                                <div style={{ ...styles.timelineTrackActive, width: activeWidth }} />
+                                                <div style={styles.timelineStepsRow}>
+                                                    {steps.map((label, index) => (
+                                                        <div key={label} style={styles.timelineStep}>
+                                                            <div
+                                                                style={{
+                                                                    ...styles.timelineDot,
+                                                                    ...(index <= step ? styles.timelineDotActive : {}),
+                                                                }}
+                                                            />
+                                                            <span
+                                                                style={{
+                                                                    ...styles.timelineLabel,
+                                                                    ...(index <= step ? styles.timelineLabelActive : {}),
+                                                                }}
+                                                            >
+                                                                {label}
+                                                            </span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div style={{
-                                            ...styles.statusBadge,
-                                            background: statusBg(order.status),
-                                            color: statusColor(order.status),
-                                            border: `1px solid ${statusColor(order.status)}22`,
-                                        }}>
-                                            {(order.status || 'PENDING').replace(/_/g, ' ').toUpperCase()}
-                                        </div>
-                                    </div>
-                                ))
+                                    );
+                                })()
                             )}
                         </div>
                     </section>
@@ -459,17 +529,81 @@ const styles = {
     pwRow: { position: 'relative', display: 'flex', alignItems: 'center' },
     cpInput: { width: '100%', padding: '9px 40px 9px 12px', borderRadius: '6px', border: '1.5px solid #dce0e5', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', background: '#fafbfc' },
     eyeInline: { position: 'absolute', right: '10px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1rem' },
-    main: { display: 'grid', gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 0.9fr)', gap: '2.25rem', marginTop: '0.25rem', alignItems: 'flex-start' },
+    main: { display: 'grid', gridTemplateColumns: 'minmax(0, 7fr) minmax(0, 3fr)', gap: '2.25rem', marginTop: '0.25rem', alignItems: 'flex-start' },
     menuSection: { minWidth: 0 },
     orderSection: { marginTop: '0.5rem' },
     sectionTitle: { marginBottom: '1.25rem', fontSize: '1.25rem', fontWeight: '700', color: '#f9fafb' },
     orderErrorBanner: { background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', padding: '10px 14px', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.85rem' },
-    orderList: { display: 'flex', flexDirection: 'column', gap: '0.75rem' },
-    orderCard: { padding: '0.9rem 1.1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-    emptyCard: { padding: '1.5rem', textAlign: 'center' },
-    orderInfo: { display: 'flex', flexDirection: 'column' },
-    itemName: { fontWeight: '600', fontSize: '0.95rem' },
-    statusBadge: { padding: '4px 12px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: '700', whiteSpace: 'nowrap', letterSpacing: '0.03em' },
+    menuGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: '1.5rem' },
+    menuCard: {
+        padding: '1.5rem',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '0.75rem',
+        background: '#ffffff',
+        border: '1px solid #e5e7eb',
+        boxShadow: '0 18px 40px rgba(15,23,42,0.16)',
+    },
+    menuHeader: { textAlign: 'center' },
+    menuIconCircle: {
+        width: '72px', height: '72px', borderRadius: '999px', margin: '0 auto 0.75rem',
+        background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem',
+    },
+    menuName: { fontSize: '1.05rem', fontWeight: 700, color: '#020617', marginBottom: '0.25rem' },
+    menuPrice: { fontSize: '1rem', fontWeight: 600, color: '#16a34a' },
+    menuMeta: { display: 'flex', justifyContent: 'center', marginBottom: '0.5rem' },
+    menuStock: { fontSize: '0.82rem', color: '#4b5563', display: 'flex', alignItems: 'center', gap: '6px' },
+    menuStockDot: { width: '8px', height: '8px', borderRadius: '999px', background: '#16a34a', display: 'inline-block' },
+    menuOrderBtn: { width: '100%', marginTop: '0.5rem' },
+    menuOrderBtnSold: {
+        background: 'linear-gradient(135deg, #b91c1c, #ef4444)',
+        boxShadow: '0 10px 24px rgba(248,113,113,0.55)',
+    },
+    emptyMenuCard: { padding: '1.75rem', textAlign: 'center' },
+    carouselWrap: { marginTop: '2rem' },
+
+    orderList: { display: 'flex', flexDirection: 'column', gap: '0.75rem', maxWidth: '380px', marginLeft: 'auto' },
+    orderCard: {
+        padding: '1.1rem 1.25rem',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '0.9rem',
+        background: '#ffffff',
+        border: '1px solid #e5e7eb',
+        boxShadow: '0 18px 40px rgba(15,23,42,0.16)',
+    },
+    emptyCard: {
+        padding: '1.5rem 1.75rem',
+        textAlign: 'left',
+        background: '#ffffff',
+        border: '1px solid #e5e7eb',
+        boxShadow: '0 18px 40px rgba(15,23,42,0.16)',
+    },
+    orderInfo: { display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '0.5rem' },
+    itemName: { fontWeight: '600', fontSize: '0.95rem', color: '#020617' },
+    emptyTitle: { fontWeight: 600, fontSize: '0.95rem', marginBottom: '0.25rem', color: '#020617' },
+    emptySub: { fontSize: '0.85rem', color: '#6b7280', marginBottom: '0.75rem' },
+
+    timeline: { position: 'relative', marginTop: '0.6rem', paddingTop: '0.35rem' },
+    timelineTrack: {
+        position: 'absolute', top: '50%', left: '6px', right: '6px', height: '2px',
+        background: '#e5e7eb', transform: 'translateY(-50%)',
+    },
+    timelineTrackActive: {
+        position: 'absolute', top: '50%', left: '6px', height: '2px',
+        background: '#22c55e', transform: 'translateY(-50%)', borderRadius: '999px',
+    },
+    timelineStepsRow: { display: 'flex', justifyContent: 'space-between', position: 'relative' },
+    timelineStep: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' },
+    timelineDot: {
+        width: '10px', height: '10px', borderRadius: '999px', background: '#0f172a',
+        border: '2px solid #cbd5f5', zIndex: 1,
+    },
+    timelineDotActive: { background: '#22c55e', borderColor: '#16a34a' },
+    timelineLabel: { fontSize: '0.8rem', color: '#9ca3af' },
+    timelineLabelActive: { color: '#22c55e', fontWeight: 600 },
+    timelineSkeleton: { marginTop: '0.25rem' },
+    timelineBar: { height: '4px', borderRadius: '999px', background: 'linear-gradient(90deg, #e5e7eb, #cbd5f5)' },
     notification: {
         position: 'fixed', bottom: '1.5rem', right: '1.5rem',
         padding: '12px 20px',

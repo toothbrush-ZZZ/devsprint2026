@@ -5,6 +5,7 @@ from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
 from rest_framework_simplejwt.exceptions import TokenError
 from django.contrib.auth import authenticate
+from django.contrib.auth.hashers import check_password
 from django.contrib.auth.hashers import make_password
 from .models import Student
 from .permissions import IsAdminUser
@@ -175,6 +176,80 @@ def metrics(request):
         "total_students": total_students,
         "status": "running"
     })
+
+# ─────────────────────────────────────────
+# CHANGE PASSWORD
+# logged-in users change their own password
+# ─────────────────────────────────────────
+@api_view(['POST'])
+def change_password(request):
+    """
+    POST /change-password/
+    Body: { "old_password": "...", "new_password": "..." }
+    Requires valid JWT token.
+    """
+    old_password = request.data.get('old_password')
+    new_password = request.data.get('new_password')
+
+    if not old_password or not new_password:
+        return Response(
+            {"error": "old_password and new_password are required"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    if len(new_password) < 4:
+        return Response(
+            {"error": "New password must be at least 4 characters"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    user = request.user
+    if not check_password(old_password, user.password):
+        return Response(
+            {"error": "Old password is incorrect"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    user.set_password(new_password)
+    user.save()
+
+    return Response({"message": "Password changed successfully"})
+
+
+# ─────────────────────────────────────────
+# ADMIN RESET PASSWORD
+# admins can reset any student's password
+# ─────────────────────────────────────────
+@api_view(['POST'])
+@permission_classes([IsAdminUser])
+def admin_reset_password(request):
+    """
+    POST /reset-password/
+    Body: { "student_id": "...", "new_password": "..." }
+    Admin only — resets a student's password without knowing the old one.
+    """
+    student_id = request.data.get('student_id')
+    new_password = request.data.get('new_password')
+
+    if not student_id or not new_password:
+        return Response(
+            {"error": "student_id and new_password are required"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    try:
+        student = Student.objects.get(student_id=student_id)
+    except Student.DoesNotExist:
+        return Response(
+            {"error": "Student not found"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    student.set_password(new_password)
+    student.save()
+
+    return Response({"message": f"Password for {student_id} has been reset"})
+
 
 # ─────────────────────────────────────────
 # CHAOS TOGGLE

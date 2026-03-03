@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { api } from '../utils/api';
+import IutLogo from '../components/IutLogo';
 
 const LS_KEY = (studentId) => `active_order_${studentId}`;
+const DISMISSED_KEY = (studentId) => `dismissed_orders_${studentId}`;
 
 const StudentPage = ({ user, onLogout }) => {
     const [items, setItems] = useState([]);
@@ -15,6 +17,7 @@ const StudentPage = ({ user, onLogout }) => {
     const [showCpOld, setShowCpOld] = useState(false);
     const [showCpNew, setShowCpNew] = useState(false);
     const [showBilling, setShowBilling] = useState(false);
+    const [dismissedOrders, setDismissedOrders] = useState([]);
 
     // Ref to track which order IDs are already in the list — avoids calling
     // fetchSingleOrder inside a state updater (React StrictMode runs those twice)
@@ -36,6 +39,23 @@ const StudentPage = ({ user, onLogout }) => {
     };
     const loadPersistedOrder = async () => {
         try {
+            const freshLoginKey = `fresh_login_${user.student_id}`;
+            const isFreshLogin = sessionStorage.getItem(freshLoginKey) === '1';
+
+            if (isFreshLogin) {
+                // Consume the marker — next page refresh won't re-clear banners
+                sessionStorage.removeItem(freshLoginKey);
+                // Clear dismissed banners from a previous session
+                localStorage.removeItem(DISMISSED_KEY(user.student_id));
+                setDismissedOrders([]);
+            } else {
+                // Page refresh within the same session — restore dismissed banners
+                try {
+                    const raw = localStorage.getItem(DISMISSED_KEY(user.student_id));
+                    if (raw) setDismissedOrders(JSON.parse(raw));
+                } catch {}
+            }
+
             const raw = localStorage.getItem(LS_KEY(user.student_id));
             if (!raw) return;
             const saved = JSON.parse(raw);
@@ -61,15 +81,29 @@ const StudentPage = ({ user, onLogout }) => {
             const data = await api.get('order', `/order/${orderId}/`, user.access_token);
             if (!data.order_id) return;
 
-            const terminal = ['ready', 'cancelled', 'failed'];
-            if (terminal.includes(data.status)) {
-                // Remove from list if terminal; clear persistence
+            const showBanner = ['ready', 'cancelled'];
+            const silentRemove = ['failed'];
+
+            if (showBanner.includes(data.status)) {
+                // Remove from active list
+                setActiveOrders(prev => prev.filter(o => o.order_id !== data.order_id));
+                knownOrderIds.current.delete(data.order_id);
+                clearPersistedOrder();
+                // Push into dismissed banners — persist so they survive a refresh
+                const entry = { order_id: data.order_id, item_name: data.item_name || 'Meal', status: data.status };
+                setDismissedOrders(prev => {
+                    const already = prev.some(o => o.order_id === data.order_id);
+                    const updated = already ? prev.map(o => o.order_id === data.order_id ? entry : o) : [entry, ...prev];
+                    try { localStorage.setItem(DISMISSED_KEY(user.student_id), JSON.stringify(updated)); } catch {}
+                    return updated;
+                });
+            } else if (silentRemove.includes(data.status)) {
                 setActiveOrders(prev => prev.filter(o => o.order_id !== data.order_id));
                 knownOrderIds.current.delete(data.order_id);
                 clearPersistedOrder();
             } else {
                 knownOrderIds.current.add(data.order_id);
-                persistOrder(data); // keep localStorage fresh on every successful fetch
+                persistOrder(data);
                 setActiveOrders(prev => {
                     const idx = prev.findIndex(o => o.order_id === data.order_id);
                     if (idx > -1) {
@@ -175,23 +209,15 @@ const StudentPage = ({ user, onLogout }) => {
         }
     };
 
-    const statusColor = (s) => ({
-        ready: '#16a34a',
-        in_kitchen: '#d97706',
-        pending: '#2563eb',
-        stock_verified: '#0891b2',
-        cancelled: '#6b7280',
-        failed: '#dc2626',
-    }[s] || '#1a6137');
-
-    const statusBg = (s) => ({
-        ready: '#f0fdf4',
-        in_kitchen: '#fffbeb',
-        pending: '#eff6ff',
-        stock_verified: '#ecfeff',
-        cancelled: '#f3f4f6',
-        failed: '#fef2f2',
-    }[s] || '#f0fdf4');
+    const STATUS_META = {
+        ready:          { label: 'Ready to Pick Up', color: '#22c55e', glow: 'rgba(34,197,94,0.35)',  bg: 'rgba(34,197,94,0.12)',   icon: '✅' },
+        in_kitchen:     { label: 'In Kitchen',        color: '#f59e0b', glow: 'rgba(245,158,11,0.35)', bg: 'rgba(245,158,11,0.12)',  icon: '🍳' },
+        pending:        { label: 'Order Placed',       color: '#60a5fa', glow: 'rgba(96,165,250,0.35)', bg: 'rgba(96,165,250,0.12)',  icon: '🕐' },
+        stock_verified: { label: 'Stock Confirmed',   color: '#34d399', glow: 'rgba(52,211,153,0.35)', bg: 'rgba(52,211,153,0.12)',  icon: '📦' },
+        cancelled:      { label: 'Cancelled',          color: '#94a3b8', glow: 'rgba(148,163,184,0.2)', bg: 'rgba(148,163,184,0.1)',  icon: '✕' },
+        failed:         { label: 'Failed',             color: '#f87171', glow: 'rgba(248,113,113,0.35)',bg: 'rgba(248,113,113,0.12)', icon: '⚠️' },
+    };
+    const getMeta = (s) => STATUS_META[s] || STATUS_META.pending;
 
     // Filter out any garbage entries that slipped in (no order_id)
     const validOrders = activeOrders.filter(o => o.order_id);
@@ -202,7 +228,7 @@ const StudentPage = ({ user, onLogout }) => {
             <header style={styles.header}>
                 <div style={styles.headerInner}>
                     <div style={styles.headerLeft}>
-                        <div style={styles.logoMark}>IUT</div>
+                        <IutLogo size={40} />
                         <div>
                             <h1 style={styles.headerTitle}>IUT Cafeteria</h1>
                             <p style={styles.headerSub}>{user.student_id}</p>
@@ -309,58 +335,126 @@ const StudentPage = ({ user, onLogout }) => {
                     </section>
 
                     <section style={styles.orderSection}>
-                        <h2 style={styles.sectionTitle}>Active Orders</h2>
+                        {/* Section header with live badge */}
+                        <div style={styles.orderSectionHeader}>
+                            <h2 style={styles.sectionTitle}>Active Orders</h2>
+                            {validOrders.length > 0 && (
+                                <span style={styles.liveBadge}>
+                                    <span style={styles.liveDot} />
+                                    LIVE
+                                </span>
+                            )}
+                        </div>
+
                         <div style={styles.orderList}>
                             {validOrders.length === 0 ? (
-                                <div className="card" style={styles.emptyCard}>
+                                <div style={styles.emptyCard}>
+                                    <div style={styles.emptyIconWrap}>🛒</div>
                                     <p style={styles.emptyTitle}>No active orders</p>
-                                    <p style={styles.emptySub}>Pick a meal from the menu to see your order timeline here.</p>
-                                    <div style={styles.timelineSkeleton}>
-                                        <div style={styles.timelineBar} />
+                                    <p style={styles.emptySub}>Pick a meal from the menu — your live order status will appear here.</p>
+                                    <div style={styles.skeletonTrack}>
+                                        <div style={styles.skeletonFill} />
+                                    </div>
+                                    <div style={styles.skeletonDotsRow}>
+                                        {['Placed', 'In Kitchen', 'Ready'].map(l => (
+                                            <div key={l} style={styles.skeletonStep}>
+                                                <div style={styles.skeletonDot} />
+                                                <span style={styles.skeletonLabel}>{l}</span>
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
                             ) : (
                                 (() => {
-                                    const order = validOrders[0]; // show most recent/first order
+                                    const order = validOrders[0];
                                     const status = (order.status || 'pending').toLowerCase();
+                                    const meta = getMeta(status);
                                     const step =
                                         status === 'ready' ? 2 :
                                         (status === 'in_kitchen' || status === 'stock_verified') ? 1 : 0;
-                                    const activeWidth = ['0%', '50%', '100%'][step];
-                                    const steps = ['Placed', 'In kitchen', 'Ready'];
+                                    const pct = ['8%', '50%', '100%'][step];
+                                    const STEPS = [
+                                        { label: 'Placed',     icon: '🎯' },
+                                        { label: 'In Kitchen', icon: '🍳' },
+                                        { label: 'Ready',      icon: '✅' },
+                                    ];
                                     return (
-                                        <div className="card" style={styles.orderCard}>
-                                            <div style={styles.orderInfo}>
-                                                <span style={styles.itemName}>{order.item_name || 'Meal'}</span>
-                                            </div>
-                                            <div style={styles.timeline}>
-                                                <div style={styles.timelineTrack} />
-                                                <div style={{ ...styles.timelineTrackActive, width: activeWidth }} />
-                                                <div style={styles.timelineStepsRow}>
-                                                    {steps.map((label, index) => (
-                                                        <div key={label} style={styles.timelineStep}>
-                                                            <div
-                                                                style={{
-                                                                    ...styles.timelineDot,
-                                                                    ...(index <= step ? styles.timelineDotActive : {}),
-                                                                }}
-                                                            />
-                                                            <span
-                                                                style={{
-                                                                    ...styles.timelineLabel,
-                                                                    ...(index <= step ? styles.timelineLabelActive : {}),
-                                                                }}
-                                                            >
-                                                                {label}
-                                                            </span>
-                                                        </div>
-                                                    ))}
+                                        <div style={{ ...styles.orderCard, borderColor: meta.color, boxShadow: `0 0 0 1px ${meta.color}40, 0 20px 50px rgba(0,0,0,0.35)` }}>
+                                            {/* Top row: item name + status chip */}
+                                            <div style={styles.orderTopRow}>
+                                                <div>
+                                                    <div style={styles.orderItemLabel}>Your Order</div>
+                                                    <div style={styles.orderItemName}>{order.item_name || 'Meal'}</div>
                                                 </div>
+                                                <div style={{ ...styles.statusChip, background: meta.bg, border: `1px solid ${meta.color}60`, color: meta.color }}>
+                                                    <span style={{ ...styles.statusChipDot, background: meta.color, boxShadow: `0 0 6px ${meta.color}` }} />
+                                                    {meta.label}
+                                                </div>
+                                            </div>
+
+                                            {/* Divider */}
+                                            <div style={{ ...styles.orderDivider, background: `linear-gradient(90deg, ${meta.color}40, transparent)` }} />
+
+                                            {/* Timeline */}
+                                            <div style={styles.timeline}>
+                                                {/* Track */}
+                                                <div style={styles.timelineTrack} />
+                                                <div style={{ ...styles.timelineTrackActive, width: pct, background: `linear-gradient(90deg, ${meta.color}, ${meta.color}bb)`, boxShadow: `0 0 8px ${meta.glow}` }} />
+
+                                                {/* Steps */}
+                                                <div style={styles.timelineStepsRow}>
+                                                    {STEPS.map(({ label, icon }, index) => {
+                                                        const done = index <= step;
+                                                        return (
+                                                            <div key={label} style={styles.timelineStep}>
+                                                                <div style={{
+                                                                    ...styles.timelineDot,
+                                                                    ...(done ? {
+                                                                        background: meta.color,
+                                                                        borderColor: meta.color,
+                                                                        boxShadow: `0 0 10px ${meta.glow}`,
+                                                                        fontSize: '0.7rem',
+                                                                        display: 'flex',
+                                                                        alignItems: 'center',
+                                                                        justifyContent: 'center',
+                                                                    } : {}),
+                                                                }}>
+                                                                    {done ? '✓' : ''}
+                                                                </div>
+                                                                <div style={styles.timelineIcon}>{icon}</div>
+                                                                <span style={{ ...styles.timelineLabel, ...(done ? { color: meta.color, fontWeight: 600 } : {}) }}>
+                                                                    {label}
+                                                                </span>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+
+                                            {/* Order ID footer */}
+                                            <div style={styles.orderFooter}>
+                                                <span style={styles.orderIdLabel}>Order #{String(order.order_id).slice(-6).toUpperCase()}</span>
                                             </div>
                                         </div>
                                     );
                                 })()
                             )}
+                            {/* Dismissed order banners */}
+                            {dismissedOrders.map(o => {
+                                const isReady = o.status === 'ready';
+                                return (
+                                    <div key={o.order_id} style={{ ...styles.dismissedBanner, borderColor: isReady ? '#22c55e' : '#64748b' }}>
+                                        <div style={styles.dismissedBannerTop}>
+                                            <span style={{ ...styles.dismissedStatusChip, background: isReady ? 'rgba(34,197,94,0.12)' : 'rgba(100,116,139,0.12)', color: isReady ? '#22c55e' : '#94a3b8', border: `1px solid ${isReady ? 'rgba(34,197,94,0.4)' : 'rgba(100,116,139,0.3)'}` }}>
+                                                {isReady ? '✅ Ready to Pick Up' : '✕ Cancelled'}
+                                            </span>
+                                            <span style={styles.dismissedOrderId}>#{String(o.order_id).slice(-6).toUpperCase()}</span>
+                                        </div>
+                                        <div style={styles.dismissedItemName}>{o.item_name}</div>
+                                        <div style={styles.dismissedNote}>Clears on next login</div>
+                                    </div>
+                                );
+                            })}
                         </div>
                     </section>
                 </main>
@@ -563,48 +657,118 @@ const styles = {
     emptyMenuCard: { padding: '1.75rem', textAlign: 'center' },
     carouselWrap: { marginTop: '2rem' },
 
+    // ── Active Orders Panel ──────────────────────────────────────────────────
+    orderSectionHeader: { display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '1.25rem' },
+    liveBadge: {
+        display: 'inline-flex', alignItems: 'center', gap: '5px',
+        background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.4)',
+        color: '#22c55e', fontSize: '0.65rem', fontWeight: 800,
+        letterSpacing: '0.12em', padding: '3px 8px', borderRadius: '999px',
+    },
+    liveDot: {
+        width: '6px', height: '6px', borderRadius: '999px', background: '#22c55e',
+        animation: 'pulse 1.6s ease-in-out infinite',
+        boxShadow: '0 0 6px rgba(34,197,94,0.9)',
+    },
     orderList: { display: 'flex', flexDirection: 'column', gap: '0.75rem', maxWidth: '380px', marginLeft: 'auto' },
     orderCard: {
-        padding: '1.1rem 1.25rem',
+        padding: '1.25rem',
         display: 'flex',
         flexDirection: 'column',
-        gap: '0.9rem',
-        background: '#ffffff',
-        border: '1px solid #e5e7eb',
-        boxShadow: '0 18px 40px rgba(15,23,42,0.16)',
+        gap: '1rem',
+        background: 'linear-gradient(145deg, #0f1f14, #0d1a10)',
+        border: '1px solid transparent',
+        borderRadius: '14px',
+        transition: 'box-shadow 0.3s',
     },
-    emptyCard: {
-        padding: '1.5rem 1.75rem',
-        textAlign: 'left',
-        background: '#ffffff',
-        border: '1px solid #e5e7eb',
-        boxShadow: '0 18px 40px rgba(15,23,42,0.16)',
+    orderTopRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.75rem' },
+    orderItemLabel: { fontSize: '0.7rem', color: '#6b7280', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '2px' },
+    orderItemName: { fontWeight: 700, fontSize: '1rem', color: '#f9fafb' },
+    statusChip: {
+        display: 'inline-flex', alignItems: 'center', gap: '5px',
+        padding: '5px 10px', borderRadius: '999px',
+        fontSize: '0.72rem', fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0,
     },
-    orderInfo: { display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '0.5rem' },
-    itemName: { fontWeight: '600', fontSize: '0.95rem', color: '#020617' },
-    emptyTitle: { fontWeight: 600, fontSize: '0.95rem', marginBottom: '0.25rem', color: '#020617' },
-    emptySub: { fontSize: '0.85rem', color: '#6b7280', marginBottom: '0.75rem' },
+    statusChipDot: { width: '7px', height: '7px', borderRadius: '999px', flexShrink: 0 },
+    orderDivider: { height: '1px', borderRadius: '999px', opacity: 0.5 },
 
-    timeline: { position: 'relative', marginTop: '0.6rem', paddingTop: '0.35rem' },
+    // Timeline
+    timeline: { position: 'relative', paddingTop: '1.6rem', paddingBottom: '0.25rem' },
     timelineTrack: {
-        position: 'absolute', top: '50%', left: '6px', right: '6px', height: '2px',
-        background: '#e5e7eb', transform: 'translateY(-50%)',
+        position: 'absolute', top: '10px', left: '12px', right: '12px', height: '3px',
+        background: 'rgba(255,255,255,0.08)', borderRadius: '999px',
     },
     timelineTrackActive: {
-        position: 'absolute', top: '50%', left: '6px', height: '2px',
-        background: '#22c55e', transform: 'translateY(-50%)', borderRadius: '999px',
+        position: 'absolute', top: '10px', left: '12px', height: '3px',
+        borderRadius: '999px', transition: 'width 0.6s ease',
     },
     timelineStepsRow: { display: 'flex', justifyContent: 'space-between', position: 'relative' },
-    timelineStep: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' },
+    timelineStep: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', zIndex: 1 },
     timelineDot: {
-        width: '10px', height: '10px', borderRadius: '999px', background: '#0f172a',
-        border: '2px solid #cbd5f5', zIndex: 1,
+        width: '20px', height: '20px', borderRadius: '999px',
+        background: 'rgba(255,255,255,0.07)', border: '2px solid rgba(255,255,255,0.15)',
+        color: 'transparent', fontSize: '0.6rem', fontWeight: 800,
+        zIndex: 1, transition: 'all 0.3s',
     },
-    timelineDotActive: { background: '#22c55e', borderColor: '#16a34a' },
-    timelineLabel: { fontSize: '0.8rem', color: '#9ca3af' },
-    timelineLabelActive: { color: '#22c55e', fontWeight: 600 },
-    timelineSkeleton: { marginTop: '0.25rem' },
-    timelineBar: { height: '4px', borderRadius: '999px', background: 'linear-gradient(90deg, #e5e7eb, #cbd5f5)' },
+    timelineIcon: { fontSize: '0.95rem', lineHeight: 1 },
+    timelineLabel: { fontSize: '0.72rem', color: '#6b7280', textAlign: 'center', lineHeight: 1.2 },
+    orderFooter: { display: 'flex', justifyContent: 'flex-end' },
+    orderIdLabel: { fontSize: '0.68rem', color: '#4b5563', fontFamily: 'monospace', letterSpacing: '0.06em' },
+
+    // Dismissed order banners
+    dismissedBanner: {
+        padding: '0.9rem 1rem',
+        borderRadius: '12px',
+        background: 'linear-gradient(145deg, #0f1f14, #0d1a10)',
+        border: '1px solid transparent',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '0.35rem',
+    },
+    dismissedBannerTop: {
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+    },
+    dismissedStatusChip: {
+        fontSize: '0.72rem', fontWeight: 700,
+        padding: '3px 9px', borderRadius: '999px',
+    },
+    dismissedOrderId: {
+        fontSize: '0.65rem', color: '#4b5563', fontFamily: 'monospace', letterSpacing: '0.06em',
+    },
+    dismissedItemName: {
+        fontSize: '0.88rem', fontWeight: 600, color: '#e5e7eb',
+    },
+    dismissedNote: {
+        fontSize: '0.68rem', color: '#374151', fontStyle: 'italic',
+    },
+
+    // Empty state
+    emptyCard: {
+        padding: '1.75rem 1.5rem', textAlign: 'center',
+        background: 'linear-gradient(145deg, #0f1f14, #0d1a10)',
+        border: '1px dashed rgba(255,255,255,0.1)',
+        borderRadius: '14px',
+    },
+    emptyIconWrap: { fontSize: '2rem', marginBottom: '0.6rem', opacity: 0.4, lineHeight: 1 },
+    emptyTitle: { fontWeight: 700, fontSize: '0.95rem', color: '#9ca3af', marginBottom: '0.35rem' },
+    emptySub: { fontSize: '0.8rem', color: '#4b5563', lineHeight: 1.5, marginBottom: '1.1rem' },
+    skeletonTrack: {
+        height: '3px', background: 'rgba(255,255,255,0.06)', borderRadius: '999px',
+        margin: '0 8px', position: 'relative', overflow: 'hidden',
+    },
+    skeletonFill: {
+        position: 'absolute', inset: 0,
+        background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent)',
+        animation: 'shimmer 2s infinite',
+    },
+    skeletonDotsRow: { display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem', padding: '0 8px' },
+    skeletonStep: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' },
+    skeletonDot: {
+        width: '16px', height: '16px', borderRadius: '999px',
+        background: 'rgba(255,255,255,0.06)', border: '2px solid rgba(255,255,255,0.08)',
+    },
+    skeletonLabel: { fontSize: '0.68rem', color: '#374151' },
+
     notification: {
         position: 'fixed', bottom: '1.5rem', right: '1.5rem',
         padding: '12px 20px',

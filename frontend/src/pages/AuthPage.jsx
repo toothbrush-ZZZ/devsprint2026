@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { api } from '../utils/api';
+import IutLogo from '../components/IutLogo';
 
 const AuthPage = ({ onLogin }) => {
     const [isLogin, setIsLogin] = useState(true);
@@ -26,6 +27,8 @@ const AuthPage = ({ onLogin }) => {
 
             if (isLogin) {
                 if (data.access_token) {
+                    // Mark this as a fresh login so StudentPage can clear old dismissed banners
+                    try { sessionStorage.setItem(`fresh_login_${data.student_id}`, '1'); } catch {}
                     onLogin(data);
                 } else {
                     setError('Unexpected response from server.');
@@ -73,7 +76,7 @@ const AuthPage = ({ onLogin }) => {
                 <div className="card" style={styles.card}>
                     {/* IUT branding */}
                     <div style={styles.branding}>
-                        <div style={styles.logoMark}>IUT</div>
+                        <IutLogo size={56} />
                         <h1 style={styles.title}>IUT Cafeteria</h1>
                         <p style={styles.subtitle}>
                             Islamic University of Technology

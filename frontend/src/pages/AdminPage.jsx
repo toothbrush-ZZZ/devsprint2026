@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../utils/api';
+import IutLogo from '../components/IutLogo';
 
 // ── Service metadata for the Chaos/Health/Metrics panels ────────────────────
 const SERVICES = [
@@ -18,9 +19,11 @@ const AdminPage = ({ user, onLogout }) => {
     const [newItem, setNewItem] = useState({ name: '', price: '', quantity: '' });
     const [editingStockId, setEditingStockId] = useState(null);
     const [stockEditValue, setStockEditValue] = useState('');
+    const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
     // Kitchen / Orders state
     const [orders, setOrders] = useState([]);
+    const [cancelConfirmOrderId, setCancelConfirmOrderId] = useState(null);
 
     // Chaos state: { identity: true/false, stock: false, ... }
     const [chaosState, setChaosState] = useState({});
@@ -96,14 +99,15 @@ const AdminPage = ({ user, onLogout }) => {
         }
     };
 
-    const handleDeleteItem = async (id, name) => {
-        if (!window.confirm(`Delete "${name}"?`)) return;
+    const handleDeleteItem = async (id) => {
         try {
             await api.delete('stock', `/items/${id}/delete/`, user.access_token);
             showNotification('Item deleted.');
+            setConfirmDeleteId(null);
             fetchInventory();
         } catch (err) {
             showNotification(err.message || 'Failed to delete item.');
+            setConfirmDeleteId(null);
         }
     };
 
@@ -152,7 +156,7 @@ const AdminPage = ({ user, onLogout }) => {
     };
 
     const handleCancelOrder = async (orderId) => {
-        if (!window.confirm(`Cancel order #${orderId}?`)) return;
+        setCancelConfirmOrderId(null);
         try {
             await api.delete('order', `/order/${orderId}/cancel/`, user.access_token);
             showNotification(`Order #${orderId} cancelled.`);
@@ -253,7 +257,7 @@ const AdminPage = ({ user, onLogout }) => {
             <header style={styles.header}>
                 <div style={styles.headerInner}>
                     <div style={styles.headerLeft}>
-                        <div style={styles.logoMark}>IUT</div>
+                        <IutLogo size={40} />
                         <div>
                             <h1 style={styles.headerTitle}>Admin Dashboard</h1>
                             <p style={styles.headerSub}>IUT Cafeteria · {user.student_id}</p>
@@ -338,13 +342,19 @@ const AdminPage = ({ user, onLogout }) => {
                                                                 <button onClick={() => handleStockAction(item.id, 'add', stockEditValue)} style={styles.actionBtn} title="Confirm">✓</button>
                                                                 <button onClick={() => setEditingStockId(null)} style={{ ...styles.actionBtn, color: '#dc2626' }} title="Cancel">✕</button>
                                                             </div>
+                                                        ) : confirmDeleteId === item.id ? (
+                                                            <div style={styles.actionGroup}>
+                                                                <span style={{ fontSize: '0.8rem', color: '#dc2626', fontWeight: '600', marginRight: '4px' }}>Delete?</span>
+                                                                <button onClick={() => handleDeleteItem(item.id)} style={{ ...styles.actionBtn, background: '#dc2626', color: 'white', border: '1px solid #dc2626' }} title="Confirm delete">Yes</button>
+                                                                <button onClick={() => setConfirmDeleteId(null)} style={styles.actionBtn} title="Cancel">No</button>
+                                                            </div>
                                                         ) : (
                                                             <div style={styles.actionGroup}>
                                                                 <button onClick={() => handleStockAction(item.id, 'add')} style={styles.actionBtn} title="Add stock">+</button>
                                                                 <button onClick={() => handleStockAction(item.id, item.available ? 'pause' : 'unpause')} style={styles.actionBtn} title={item.available ? 'Pause' : 'Unpause'}>
                                                                     {item.available ? '⏸' : '▶'}
                                                                 </button>
-                                                                <button onClick={() => handleDeleteItem(item.id, item.name)} style={{ ...styles.actionBtn, color: '#dc2626' }} title="Delete">✕</button>
+                                                                <button onClick={() => setConfirmDeleteId(item.id)} style={{ ...styles.actionBtn, color: '#dc2626' }} title="Delete">✕</button>
                                                             </div>
                                                         )}
                                                     </td>
@@ -380,7 +390,22 @@ const AdminPage = ({ user, onLogout }) => {
                                         </span>
                                         <div style={{ display: 'flex', gap: '0.5rem', flexDirection: 'column' }}>
                                             <button className="btn-primary" style={styles.fullBtn} onClick={() => handleMarkReady(order.order_id)}>Mark Ready</button>
-                                            <button style={{ ...styles.fullBtn, background: '#fef2f2', color: '#991b1b', borderRadius: '6px', padding: '8px', fontWeight: '600', border: '1px solid #fecaca' }} onClick={() => handleCancelOrder(order.order_id)}>Cancel Order</button>
+                                            {cancelConfirmOrderId === order.order_id ? (
+                                                <div style={styles.cancelConfirmBox}>
+                                                    <span style={styles.cancelConfirmText}>Cancel this order?</span>
+                                                    <div style={styles.cancelConfirmBtns}>
+                                                        <button style={styles.cancelConfirmYes} onClick={() => handleCancelOrder(order.order_id)}>Yes, Cancel</button>
+                                                        <button style={styles.cancelConfirmNo} onClick={() => setCancelConfirmOrderId(null)}>Keep Order</button>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <button
+                                                    style={{ ...styles.fullBtn, background: '#fef2f2', color: '#991b1b', borderRadius: '6px', padding: '8px', fontWeight: '600', border: '1px solid #fecaca', cursor: 'pointer' }}
+                                                    onClick={() => setCancelConfirmOrderId(order.order_id)}
+                                                >
+                                                    Cancel Order
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                 ))}
@@ -702,6 +727,35 @@ const styles = {
     inlineInput: {
         width: '60px', padding: '4px 6px', borderRadius: '4px',
         border: '1.5px solid #dce0e5', fontSize: '0.85rem', outline: 'none',
+    },
+
+    // Inline cancel confirmation (kitchen)
+    cancelConfirmBox: {
+        padding: '0.65rem 0.8rem',
+        borderRadius: '8px',
+        background: '#fef2f2',
+        border: '1px solid #fecaca',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '0.5rem',
+    },
+    cancelConfirmText: {
+        fontSize: '0.82rem', fontWeight: 700, color: '#991b1b',
+    },
+    cancelConfirmBtns: {
+        display: 'flex', gap: '0.5rem',
+    },
+    cancelConfirmYes: {
+        flex: 1, padding: '6px 0', borderRadius: '6px', fontWeight: 700,
+        fontSize: '0.78rem', cursor: 'pointer',
+        background: '#dc2626', color: 'white', border: 'none',
+        boxShadow: '0 2px 8px rgba(220,38,38,0.3)',
+    },
+    cancelConfirmNo: {
+        flex: 1, padding: '6px 0', borderRadius: '6px', fontWeight: 700,
+        fontSize: '0.78rem', cursor: 'pointer',
+        background: 'white', color: '#374151',
+        border: '1px solid #d1d5db',
     },
 };
 

@@ -102,3 +102,80 @@ The project uses a default set of environment variables configured in `docker-co
 ## 🧪 Testing and Chaos Mode
 
 Each service includes a `/chaos/` endpoint (admin only) to toggle chaos mode, allowing you to simulate failures in specific parts of the microservices ecosystem to verify system stability and error handling.
+
+## 🤖 AI Usage Details
+
+> AI usage was allowed and encouraged in this hackathon. This project was developed with AI assistance, under full human direction and review.
+
+### 🔧 Tools Used
+
+- **Claude** – Used to generate the initial backend codebase and refine functions through detailed, personalized prompts.
+- **Cursor** – Used to generate and iterate on the React frontend using structured prompts.
+- **Antigravity** – Used for endpoint validation, mismatch detection, and debugging during service integration.
+- **Agentic AI tools** – Used to assist in generating project documentation.
+
+---
+
+### 🧠 Nature of AI Assistance
+
+AI was primarily used for:
+
+- Generating initial boilerplate code for services
+- Writing and refining Docker and microservice configurations
+- Debugging integration issues (Redis, service communication, endpoints)
+- Detecting API mismatches across services
+- Improving and refactoring functions through prompt-driven iteration
+- Generating documentation drafts
+
+---
+
+### 👨‍💻 Human Oversight & Architectural Ownership
+
+- All architectural decisions (microservices separation, Redis Pub/Sub, JWT authentication, chaos engineering approach) were conceptualized and directed by the project author.
+- AI tools were used strictly as implementation assistants.
+- Every AI-generated code segment was:
+  - Fully reviewed
+  - Understood
+  - Modified where necessary
+  - Debugged manually
+
+As a first-time developer working with a distributed microservices system, AI was used as an accelerator — not as a replacement for understanding. All core ideas, system design decisions, and feature planning originated from the author.
+
+---
+
+### 🚫 AI in Production System
+
+The deployed cafeteria platform itself does **not** include any AI-driven features.  
+AI tools were used solely during the development process.
+
+---
+
+### 🎯 Summary
+
+This project represents a human-led system design implemented with AI-assisted development.  
+AI functioned as a coding co-pilot, while architectural vision, integration decisions, and final validation remained fully human-controlled.
+
+## 🔐 Default Login Credentials
+
+For demonstration and testing purposes, the system is pre-seeded with the following accounts:
+
+### 👨‍🎓 Student Accounts
+
+| Student ID | Password     |
+|------------|--------------|
+| 210041001  | password123  |
+| 210041002  | password123  |
+
+---
+
+### 👨‍💼 Admin Account
+
+| Admin ID  | Password  |
+|-----------|-----------|
+| admin001  | admin123  |
+
+---
+
+> ⚠️ These credentials are intended strictly for development and hackathon demonstration.
+> In a production deployment, default credentials must be removed and replaced with secure authentication policies.
+

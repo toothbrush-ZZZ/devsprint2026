@@ -26,10 +26,9 @@ from inventory.models import FoodItem
 
 items = [
     ('Iftar Box',    50,  120.00),
-    ('Water Bottle', 100, 20.00),
-    ('Dates Pack',   75,  50.00),
-    ('Juice',        60,  30.00),
-    ('Samosa 6pc',   80,  40.00),
+    ('Rice with chicken', 100, 120.00),
+    ('Rice with beef',   75,  150.00),
+    ('Rice with fish',        60,  130.00),
 ]
 
 for name, qty, price in items:

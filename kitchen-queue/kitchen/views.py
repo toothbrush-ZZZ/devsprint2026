@@ -370,7 +370,7 @@ def toggle_chaos(request):
             redis_client.delete('chaos_mode')
             return Response({"status": "Chaos mode disabled"})
         else:
-            redis_client.set('chaos_mode', '1', ex=60) # 60 seconds
-            return Response({"status": "Chaos mode enabled for 60s"})
+            redis_client.set('chaos_mode', '1', ex=600) # 600 seconds (10 min)
+            return Response({"status": "Chaos mode enabled for 10 minutes"})
     except Exception as e:
         return Response({"error": f"Failed to toggle chaos: {e}"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)

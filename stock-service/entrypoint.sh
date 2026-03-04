@@ -25,10 +25,10 @@ python manage.py shell -c "
 from inventory.models import FoodItem
 
 items = [
-    ('Iftar Box',    50,  120.00),
-    ('Rice with chicken', 100, 120.00),
-    ('Rice with beef',   75,  150.00),
-    ('Rice with fish',        60,  130.00),
+    ('Iftar Box',        300, 120.00),
+    ('Rice with chicken', 300, 120.00),
+    ('Rice with beef',    300, 150.00),
+    ('Rice with fish',    300, 130.00),
 ]
 
 for name, qty, price in items:

@@ -370,13 +370,15 @@ const StudentPage = ({ user, onLogout }) => {
                                     const status = (order.status || 'pending').toLowerCase();
                                     const meta = getMeta(status);
                                     const step =
-                                        status === 'ready' ? 2 :
-                                        (status === 'in_kitchen' || status === 'stock_verified') ? 1 : 0;
-                                    const pct = ['8%', '50%', '100%'][step];
-                                    const STEPS = [
-                                        { label: 'Placed',     icon: '🎯' },
-                                        { label: 'In Kitchen', icon: '🍳' },
-                                        { label: 'Ready',      icon: '✅' },
+                                        status === 'ready'          ? 3 :
+                                        status === 'in_kitchen'     ? 2 :
+                                        status === 'stock_verified' ? 1 : 0;
+                                     const pct = ['5%', '38%', '70%', '100%'][step];
+                                     const STEPS = [
+                                        { label: 'Pending',       icon: '🕐' },
+                                        { label: 'Stock Verified', icon: '📦' },
+                                        { label: 'In Kitchen',    icon: '🍳' },
+                                        { label: 'Ready',         icon: '✅' },
                                     ];
                                     return (
                                         <div style={{ ...styles.orderCard, borderColor: meta.color, boxShadow: `0 0 0 1px ${meta.color}40, 0 20px 50px rgba(0,0,0,0.35)` }}>

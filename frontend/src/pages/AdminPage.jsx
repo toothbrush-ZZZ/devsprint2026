@@ -505,7 +505,7 @@ const AdminPage = ({ user, onLogout }) => {
                     {activeTab === 'metrics' && (
                         <div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                                <h3 style={styles.panelTitle}>Service Metrics</h3>
+                                <h3 style={styles.panelTitle}>Live Metrics</h3>
                                 <button className="btn-primary" onClick={fetchAllMetrics} disabled={metricsLoading}>
                                     {metricsLoading ? 'Fetching...' : 'Refresh'}
                                 </button>
@@ -513,11 +513,48 @@ const AdminPage = ({ user, onLogout }) => {
                             <div style={styles.serviceGrid}>
                                 {SERVICES.map(svc => {
                                     const m = metricsData[svc.key];
+                                    const latency = m?.avg_response_time_seconds;
+                                    const throughput = m?.total_orders_processed ?? m?.total_orders ?? m?.total_notifications_sent ?? m?.total_students ?? null;
+                                    const failures   = m?.failed_orders ?? m?.failed_count ?? m?.failed_notifications ?? null;
                                     return (
                                         <div key={svc.key} className="card" style={styles.serviceCard}>
-                                            <h4 style={{ fontSize: '0.95rem', color: '#020617', marginBottom: '0.75rem', fontWeight: '600' }}>{svc.label}</h4>
+                                            <h4 style={{ fontSize: '0.95rem', color: '#020617', marginBottom: '1rem', fontWeight: '700' }}>{svc.label}</h4>
                                             {m ? (
-                                                <pre style={styles.jsonPre}>{JSON.stringify(m, null, 2)}</pre>
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                                                    {latency !== undefined && latency !== null && (
+                                                        <div style={styles.metricRow}>
+                                                            <span style={styles.metricLabel}>⏱ Avg Latency</span>
+                                                            <span style={{ ...styles.metricValue, color: latency > 1 ? '#dc2626' : '#16a34a' }}>
+                                                                {latency < 0.001 ? '<1ms' : `${(latency * 1000).toFixed(1)}ms`}
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                    {throughput !== null && (
+                                                        <div style={styles.metricRow}>
+                                                            <span style={styles.metricLabel}>📊 Throughput</span>
+                                                            <span style={styles.metricValue}>{throughput.toLocaleString()}</span>
+                                                        </div>
+                                                    )}
+                                                    {failures !== null && (
+                                                        <div style={styles.metricRow}>
+                                                            <span style={styles.metricLabel}>❌ Failures</span>
+                                                            <span style={{ ...styles.metricValue, color: failures > 0 ? '#dc2626' : '#16a34a' }}>{failures}</span>
+                                                        </div>
+                                                    )}
+                                                    {/* Status breakdown if present */}
+                                                    {m.orders_by_status && (
+                                                        <div style={{ marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid #f1f5f9' }}>
+                                                            <p style={{ fontSize: '0.72rem', color: '#6b7280', fontWeight: 600, marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Orders by Status</p>
+                                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+                                                                {Object.entries(m.orders_by_status).map(([k, v]) => (
+                                                                    <span key={k} style={{ fontSize: '0.72rem', padding: '2px 8px', borderRadius: '999px', background: '#f1f5f9', color: '#374151', fontWeight: 600 }}>
+                                                                        {k}: {v}
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
                                             ) : (
                                                 <p style={{ color: '#9ca3af', fontSize: '0.85rem' }}>
                                                     {metricsLoading ? 'Loading...' : '— Unavailable —'}
@@ -718,6 +755,12 @@ const styles = {
         whiteSpace: 'pre-wrap', wordBreak: 'break-all', margin: 0,
         fontFamily: 'monospace',
     },
+    metricRow: {
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        padding: '0.4rem 0.6rem', borderRadius: '6px', background: '#f8fafc',
+    },
+    metricLabel: { fontSize: '0.82rem', color: '#4b5563', fontWeight: 500 },
+    metricValue: { fontSize: '0.9rem', fontWeight: 700, color: '#020617' },
     toast: {
         position: 'fixed', bottom: '1.5rem', right: '1.5rem',
         padding: '12px 20px', borderLeft: '4px solid #1a6137',

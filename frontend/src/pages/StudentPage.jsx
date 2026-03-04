@@ -211,7 +211,7 @@ const StudentPage = ({ user, onLogout }) => {
 
     const STATUS_META = {
         ready:          { label: 'Ready to Pick Up', color: '#22c55e', glow: 'rgba(34,197,94,0.35)',  bg: 'rgba(34,197,94,0.12)',   icon: '✅' },
-        in_kitchen:     { label: 'In Kitchen',        color: '#f59e0b', glow: 'rgba(245,158,11,0.35)', bg: 'rgba(245,158,11,0.12)',  icon: '🍳' },
+        in_kitchen:     { label: 'In Kitchen',        color: '#4ade80', glow: 'rgba(74,222,128,0.35)', bg: 'rgba(74,222,128,0.12)',  icon: '🍳' },
         pending:        { label: 'Order Placed',       color: '#60a5fa', glow: 'rgba(96,165,250,0.35)', bg: 'rgba(96,165,250,0.12)',  icon: '🕐' },
         stock_verified: { label: 'Stock Confirmed',   color: '#34d399', glow: 'rgba(52,211,153,0.35)', bg: 'rgba(52,211,153,0.12)',  icon: '📦' },
         cancelled:      { label: 'Cancelled',          color: '#94a3b8', glow: 'rgba(148,163,184,0.2)', bg: 'rgba(148,163,184,0.1)',  icon: '✕' },
@@ -337,7 +337,7 @@ const StudentPage = ({ user, onLogout }) => {
                     <section style={styles.orderSection}>
                         {/* Section header with live badge */}
                         <div style={styles.orderSectionHeader}>
-                            <h2 style={styles.sectionTitle}>Active Orders</h2>
+                            <h2 style={{ ...styles.sectionTitle, margin: 0 }}>Active Orders</h2>
                             {validOrders.length > 0 && (
                                 <span style={styles.liveBadge}>
                                     <span style={styles.liveDot} />
@@ -658,7 +658,7 @@ const styles = {
     carouselWrap: { marginTop: '2rem' },
 
     // ── Active Orders Panel ──────────────────────────────────────────────────
-    orderSectionHeader: { display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '1.25rem' },
+    orderSectionHeader: { display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '1.25rem', maxWidth: '380px', marginLeft: 'auto' },
     liveBadge: {
         display: 'inline-flex', alignItems: 'center', gap: '5px',
         background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.4)',

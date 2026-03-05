@@ -512,7 +512,7 @@ def health(request):
     Returns 200 if all good, 503 if anything is down.
     """
     try:
-        if redis_client.get('chaos_mode') == b'1':
+        if redis_client.get('chaos_mode:order') == b'1':
             return Response({"error": "Service in chaos mode"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
     except Exception:
         pass
@@ -638,12 +638,12 @@ def toggle_chaos(request):
     Manual trigger to kill the service for fault tolerance testing.
     """
     try:
-        current = redis_client.get('chaos_mode')
+        current = redis_client.get('chaos_mode:order')
         if current and current == b'1':
-            redis_client.delete('chaos_mode')
+            redis_client.delete('chaos_mode:order')
             return Response({"status": "Chaos mode disabled"})
         else:
-            redis_client.set('chaos_mode', '1', ex=600) # 600 seconds (10 min)
+            redis_client.set('chaos_mode:order', '1', ex=600) # 600 seconds (10 min)
             return Response({"status": "Chaos mode enabled for 10 minutes"})
     except Exception as e:
         return Response({"error": f"Failed to toggle chaos: {e}"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
